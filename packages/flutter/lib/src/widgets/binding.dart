@@ -528,6 +528,8 @@ mixin WidgetsBinding on BindingBase, ServicesBinding, SchedulerBinding, GestureB
 
   final List<WidgetsBindingObserver> _observers = <WidgetsBindingObserver>[];
 
+  String _urlRoute;
+
   /// Registers the given object as a binding observer. Binding
   /// observers are notified when various application events occur,
   /// for example when the system locale changes. Generally, one
@@ -545,7 +547,18 @@ mixin WidgetsBinding on BindingBase, ServicesBinding, SchedulerBinding, GestureB
   ///
   ///  * [removeObserver], to release the resources reserved by this method.
   ///  * [WidgetsBindingObserver], which has an example of using this method.
-  void addObserver(WidgetsBindingObserver observer) => _observers.add(observer);
+  void addObserver(WidgetsBindingObserver observer) {
+    _observers.add(observer);
+    if (_urlRoute != null) {
+      String urlRoute = _urlRoute;
+      observer.didPushRoute(urlRoute).then((didPush){
+        debugPrint('fed in old route: $urlRoute didPush: $didPush');
+        if (didPush) {
+          _urlRoute = null;
+        }
+      });
+    }
+  }
 
   /// Unregisters the given observer. This should be used sparingly as
   /// it is relatively expensive (O(N) in the number of registered
@@ -662,6 +675,20 @@ mixin WidgetsBinding on BindingBase, ServicesBinding, SchedulerBinding, GestureB
       if (await observer.didPushRoute(route))
         return;
     }
+    debugPrint('Push route ignored: $route');
+  }
+
+  Future<void> _handleOpenUrl(String route) async {
+    if (_observers.length > 0) {
+      for (final WidgetsBindingObserver observer in List<WidgetsBindingObserver>.from(_observers)) {
+        if (await observer.didPushRoute(route))
+          return;
+      }
+      debugPrint('Observers ignored URL route: $route');
+    } else {
+      _urlRoute = route;
+      debugPrint('URL route saved for later: $route');
+    }
   }
 
   Future<void> _handlePushRouteInformation(Map<dynamic, dynamic> routeArguments) async {
@@ -686,7 +713,10 @@ mixin WidgetsBinding on BindingBase, ServicesBinding, SchedulerBinding, GestureB
         return handlePushRoute(methodCall.arguments as String);
       case 'pushRouteInformation':
         return _handlePushRouteInformation(methodCall.arguments as Map<dynamic, dynamic>);
+      case 'openUrl':
+        return _handleOpenUrl(methodCall.arguments as String);
     }
+    debugPrint('Unhandled navigation invocation: ${methodCall.method}');
     return Future<dynamic>.value();
   }
 
