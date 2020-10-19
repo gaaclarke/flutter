@@ -305,7 +305,7 @@ class _DevFSHttpWriter implements DevFSWriter {
         // tests in "Google Tests".
         try {
           final HttpClientResponse response = await request.close().timeout(
-            const Duration(milliseconds: 10000));
+            const Duration(milliseconds: 60000));
           response.listen((_) {},
             onError: (dynamic error) {
               _logger.printTrace('error: $error');
