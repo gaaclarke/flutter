@@ -2419,6 +2419,26 @@ abstract class BuildContext {
   DiagnosticsNode describeOwnershipChain(String name);
 }
 
+void _profileBuildTimelineStart(Widget widget) {
+  Map<String, String> debugTimelineArguments =
+      timelineArgumentsIndicatingLandmarkEvent;
+  if (!kProfileMode) {
+    // On profile builds this information is not useful but slows down
+    // performance for Timeline by incurring json encoding.
+    debugTimelineArguments =
+        widget.toDiagnosticsNode().toTimelineArguments();
+  }
+  Timeline.startSync(
+    '${widget.runtimeType}',
+    arguments: debugTimelineArguments,
+  );
+}
+
+void _profileBuildTimelineStop() {
+  Timeline.finishSync();
+}
+
+
 /// Manager class for the widgets framework.
 ///
 /// This class tracks which widgets need rebuilding, and handles other tasks
@@ -2699,15 +2719,7 @@ class BuildOwner {
           return true;
         }());
         if (!kReleaseMode && debugProfileBuildsEnabled) {
-          Map<String, String> debugTimelineArguments = timelineArgumentsIndicatingLandmarkEvent;
-          assert(() {
-            debugTimelineArguments = element.widget.toDiagnosticsNode().toTimelineArguments();
-            return true;
-          }());
-          Timeline.startSync(
-            '${element.widget.runtimeType}',
-            arguments: debugTimelineArguments,
-          );
+          _profileBuildTimelineStart(element.widget);
         }
         try {
           element.rebuild();
@@ -2727,7 +2739,7 @@ class BuildOwner {
           );
         }
         if (!kReleaseMode && debugProfileBuildsEnabled)
-          Timeline.finishSync();
+          _profileBuildTimelineStop();
         index += 1;
         if (dirtyCount < _dirtyElements.length || _dirtyElementsNeedsResorting!) {
           _dirtyElements.sort(Element._sort);
@@ -3528,19 +3540,11 @@ abstract class Element extends DiagnosticableTree implements BuildContext {
         if (child.slot != newSlot)
           updateSlotForChild(child, newSlot);
         if (!kReleaseMode && debugProfileBuildsEnabled) {
-          Map<String, String> debugTimelineArguments = timelineArgumentsIndicatingLandmarkEvent;
-          assert(() {
-            debugTimelineArguments = newWidget.toDiagnosticsNode().toTimelineArguments();
-            return true;
-          }());
-          Timeline.startSync(
-            '${newWidget.runtimeType}',
-            arguments: debugTimelineArguments,
-          );
+          _profileBuildTimelineStart(newWidget);
         }
         child.update(newWidget);
         if (!kReleaseMode && debugProfileBuildsEnabled)
-          Timeline.finishSync();
+          _profileBuildTimelineStop();
         assert(child.widget == newWidget);
         assert(() {
           child.owner!._debugElementWasRebuilt(child);
@@ -3789,15 +3793,7 @@ abstract class Element extends DiagnosticableTree implements BuildContext {
     assert(newWidget != null);
 
     if (!kReleaseMode && debugProfileBuildsEnabled) {
-      Map<String, String> debugTimelineArguments = timelineArgumentsIndicatingLandmarkEvent;
-      assert(() {
-        debugTimelineArguments = newWidget.toDiagnosticsNode().toTimelineArguments();
-        return true;
-      }());
-      Timeline.startSync(
-        '${newWidget.runtimeType}',
-        arguments: debugTimelineArguments,
-      );
+      _profileBuildTimelineStart(newWidget);
     }
 
     final Key? key = newWidget.key;
@@ -3824,7 +3820,7 @@ abstract class Element extends DiagnosticableTree implements BuildContext {
     assert(newChild._lifecycleState == _ElementLifecycle.active);
 
     if (!kReleaseMode && debugProfileBuildsEnabled)
-      Timeline.finishSync();
+      _profileBuildTimelineStop();
 
     return newChild;
   }
