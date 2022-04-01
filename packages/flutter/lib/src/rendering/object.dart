@@ -126,6 +126,7 @@ class PaintingContext extends ClipContext {
       // apply here because this is exactly the place designed to create a
       // layer for repaint boundaries.
       final OffsetLayer layer = OffsetLayer();
+      print('layer ${child.widget}');
       child._layerHandle.layer = childLayer = layer;
     } else {
       assert(debugAlsoPaintedParent || childLayer.attached);
@@ -247,6 +248,7 @@ class PaintingContext extends ClipContext {
   PictureLayer? _currentLayer;
   ui.PictureRecorder? _recorder;
   Canvas? _canvas;
+  Object? widget;
 
   /// The canvas on which to paint.
   ///
@@ -255,9 +257,11 @@ class PaintingContext extends ClipContext {
   /// returned by this getter.
   @override
   Canvas get canvas {
+    print('getCanvas $widget');
     if (_canvas == null)
       _startRecording();
     assert(_currentLayer != null);
+    // _canvas!.widget = widget;
     return _canvas!;
   }
 
@@ -265,7 +269,7 @@ class PaintingContext extends ClipContext {
     assert(!_isRecording);
     _currentLayer = PictureLayer(estimatedBounds);
     _recorder = ui.PictureRecorder();
-    _canvas = Canvas(_recorder!);
+    _canvas = Canvas(_recorder!);    
     _containerLayer.append(_currentLayer!);
   }
 
@@ -1239,6 +1243,8 @@ abstract class RenderObject extends AbstractNode with DiagnosticableTreeMixin im
   RenderObject() {
     _needsCompositing = isRepaintBoundary || alwaysNeedsCompositing;
   }
+
+  Object? widget;
 
   /// Cause the entire subtree rooted at the given [RenderObject] to be marked
   /// dirty for layout, paint, etc, so that the effects of a hot reload can be
@@ -2474,6 +2480,7 @@ abstract class RenderObject extends AbstractNode with DiagnosticableTreeMixin im
     }());
     _needsPaint = false;
     try {
+      context.widget = this.widget;
       paint(context, offset);
       assert(!_needsLayout); // check that the paint() method didn't mark us dirty again
       assert(!_needsPaint); // check that the paint() method didn't mark us dirty again
