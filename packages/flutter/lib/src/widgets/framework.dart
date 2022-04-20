@@ -1694,6 +1694,14 @@ abstract class InheritedWidget extends ProxyWidget {
   bool updateShouldNotify(covariant InheritedWidget oldWidget);
 }
 
+abstract class UbiquitousInheritedWidget extends InheritedWidget {
+  const UbiquitousInheritedWidget({ Key? key, required Widget child })
+    : super(key: key, child: child);
+
+  @override
+  InheritedElement createElement() => UbiquitousInheritedElement(this);
+}
+
 /// RenderObjectWidgets provide the configuration for [RenderObjectElement]s,
 /// which wrap [RenderObject]s, which provide the actual rendering of the
 /// application.
@@ -5231,6 +5239,34 @@ class ParentDataElement<T extends ParentData> extends ProxyElement {
   @override
   void notifyClients(ParentDataWidget<T> oldWidget) {
     _applyParentData(widget as ParentDataWidget<T>);
+  }
+}
+
+class UbiquitousInheritedElement extends InheritedElement {
+  /// Creates an element that uses the given widget as its configuration.
+  UbiquitousInheritedElement(InheritedWidget widget) : super(widget);
+
+  @override
+  void setDependencies(Element dependent, Object? value) {
+    if (value != null) {
+      throw Exception('foo');
+    }
+  }
+
+  @override
+  Object? getDependencies(Element dependent) {
+    return null;
+  }
+
+  @override
+  void notifyClients(InheritedWidget oldWidget) {
+    assert(_debugCheckOwnerBuildTargetExists('notifyClients'));
+    visitChildren((final Element dependent) {
+      final Set<InheritedElement>? dependencies = dependent._dependencies;
+      if (dependencies != null && dependencies.contains(this)) {
+        notifyDependent(oldWidget, dependent);
+      }
+    });
   }
 }
 

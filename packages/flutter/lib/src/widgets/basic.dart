@@ -85,7 +85,7 @@ export 'package:flutter/services.dart' show
 ///
 /// For example, [Padding] depends on the [Directionality] to resolve
 /// [EdgeInsetsDirectional] objects into absolute [EdgeInsets] objects.
-class Directionality extends InheritedWidget {
+class Directionality extends UbiquitousInheritedWidget {
   /// Creates a widget that determines the directionality of text and
   /// text-direction-sensitive render objects.
   ///
