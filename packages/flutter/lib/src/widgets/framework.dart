@@ -15,6 +15,7 @@ import 'focus_manager.dart';
 import 'inherited_model.dart';
 import 'notification_listener.dart';
 import 'widget_inspector.dart';
+import 'persistent_map.dart';
 
 export 'package:flutter/foundation.dart' show
   factory,
@@ -4172,7 +4173,7 @@ abstract class Element extends DiagnosticableTree implements BuildContext {
     return null;
   }
 
-  Map<Type, InheritedElement>? _inheritedWidgets;
+  PersistentMap<Type, InheritedElement>? _inheritedWidgets;
   Set<InheritedElement>? _dependencies;
   bool _hadUnsatisfiedDependencies = false;
 
@@ -4208,13 +4209,13 @@ abstract class Element extends DiagnosticableTree implements BuildContext {
     _dependencies ??= HashSet<InheritedElement>();
     _dependencies!.add(ancestor);
     ancestor.updateDependencies(this, aspect);
-    return ancestor.widget as InheritedWidget;
+    return ancestor.widget as InheritedWidget;    
   }
 
   @override
   T? dependOnInheritedWidgetOfExactType<T extends InheritedWidget>({Object? aspect}) {
     assert(_debugCheckStateIsActiveForAncestorLookup());
-    final InheritedElement? ancestor = _inheritedWidgets == null ? null : _inheritedWidgets![T];
+    final InheritedElement? ancestor = _inheritedWidgets == null ? null : _inheritedWidgets!.get(T);
     if (ancestor != null) {
       return dependOnInheritedElement(ancestor, aspect: aspect) as T;
     }
@@ -4225,7 +4226,7 @@ abstract class Element extends DiagnosticableTree implements BuildContext {
   @override
   InheritedElement? getElementForInheritedWidgetOfExactType<T extends InheritedWidget>() {
     assert(_debugCheckStateIsActiveForAncestorLookup());
-    final InheritedElement? ancestor = _inheritedWidgets == null ? null : _inheritedWidgets![T];
+    final InheritedElement? ancestor = _inheritedWidgets == null ? null : _inheritedWidgets!.get(T);
     return ancestor;
   }
 
@@ -5242,12 +5243,11 @@ class InheritedElement extends ProxyElement {
   @override
   void _updateInheritance() {
     assert(_lifecycleState == _ElementLifecycle.active);
-    final Map<Type, InheritedElement>? incomingWidgets = _parent?._inheritedWidgets;
+    final PersistentMap<Type, InheritedElement>? incomingWidgets = _parent?._inheritedWidgets;
     if (incomingWidgets != null)
-      _inheritedWidgets = HashMap<Type, InheritedElement>.of(incomingWidgets);
+      _inheritedWidgets = incomingWidgets.set(widget.runtimeType, this);
     else
-      _inheritedWidgets = HashMap<Type, InheritedElement>();
-    _inheritedWidgets![widget.runtimeType] = this;
+      _inheritedWidgets = PersistentMap<Type, InheritedElement>().set(widget.runtimeType, this);
   }
 
   @override
