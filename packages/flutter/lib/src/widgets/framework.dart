@@ -53,6 +53,106 @@ class _DebugOnly {
 
 const _DebugOnly _debugOnly = _DebugOnly();
 
+
+class _FooMapEntry<K, V> {
+  _FooMapEntry(this.key, this.value, this.hashCode, this.next);
+  final K key;
+  final V value;
+  @override
+  // ignore: hash_and_equals
+  final int hashCode;
+  final _FooMapEntry<K, V>? next;
+  _FooMapEntry<K, V> copy() => _FooMapEntry<K, V>(key, value, hashCode, next?.copy());
+  /// Returns null if the key isn't found, otherwise returns the new head.
+  _FooMapEntry<K, V>? replace(K replaceKey, int replaceHash, V replaceValue) {
+    if (hashCode == replaceHash && replaceKey == key) {
+      if (replaceValue != value) {
+        return _FooMapEntry<K, V>(key, replaceValue, hashCode, next);  
+      } else {
+        return this;
+      }
+    } else {
+      final _FooMapEntry<K, V>? child = next?.replace(replaceKey, replaceHash, replaceValue);
+      return child == null ? null : _FooMapEntry<K, V>(key, value, hashCode, child);
+    }
+  }
+}
+
+class _FooMap<K, V> {
+  _FooMap();
+
+  _FooMap._copy(_FooMap<K, V> other)
+      : _elementCount = other._elementCount,
+        _buckets = List<_FooMapEntry<K, V>?>.of(other._buckets);
+
+  int _elementCount = 0;
+  List<_FooMapEntry<K, V>?> _buckets = List<_FooMapEntry<K, V>?>.filled(8, null);
+
+  V? operator [](Object? key) {
+    final hashCode = key.hashCode;
+    final buckets = _buckets;
+    final index = hashCode & (buckets.length - 1);
+    var entry = buckets[index];
+    while (entry != null) {
+      if (hashCode == entry.hashCode && entry.key == key) {
+        return entry.value;
+      }
+      entry = entry.next;
+    }
+    return null;
+  }
+
+  void operator []=(K key, V value) {
+    final hashCode = key.hashCode;
+    final buckets = _buckets;
+    final length = buckets.length;
+    final index = hashCode & (length - 1);
+    var entry = buckets[index];
+    var newEntry = entry?.replace(key, hashCode, value);
+    if (newEntry != null) {
+      buckets[index] = newEntry;
+    } else {
+      _addEntry(buckets, index, length, key, value, hashCode);
+    }
+  }
+
+  _FooMap<K, V> copy() {
+    return _FooMap<K, V>._copy(this);
+  }
+
+  void _addEntry(List<_FooMapEntry<K, V>?> buckets, int index, int length,
+      K key, V value, int hashCode) {
+    final _FooMapEntry<K, V> entry = _FooMapEntry<K, V>(key, value, hashCode, buckets[index]);
+    buckets[index] = entry;
+    final int newElements = _elementCount + 1;
+    _elementCount = newElements;
+    // If we end up with more than 75% non-empty entries, we
+    // resize the backing store.
+    if ((newElements << 2) > ((length << 1) + length)) {
+      _resize();
+    }
+  }
+
+  void _resize({int? capacity}) {
+    final List<_FooMapEntry<K, V>?> oldBuckets = _buckets;
+    final int oldLength = oldBuckets.length;
+    final int newLength = capacity ?? oldLength << 1;
+    final List<_FooMapEntry<K, V>?> newBuckets = List<_FooMapEntry<K, V>?>.filled(newLength, null);
+    for (int i = 0; i < oldLength; i++) {
+      _FooMapEntry<K, V>? entry = oldBuckets[i];
+      while (entry != null) {
+        final _FooMapEntry<K, V>? next = entry.next;
+        final int hashCode = entry.hashCode;
+        final int index = hashCode & (newLength - 1);
+        newBuckets[index] = _FooMapEntry<K, V>(entry.key, entry.value, entry.hashCode, newBuckets[index]);
+        entry = next;
+      }
+    }
+    _buckets = newBuckets;
+  }
+}
+
+
 // KEYS
 
 /// A key that takes its identity from the object used as its value.
@@ -4172,7 +4272,7 @@ abstract class Element extends DiagnosticableTree implements BuildContext {
     return null;
   }
 
-  Map<Type, InheritedElement>? _inheritedWidgets;
+  _FooMap<Type, InheritedElement>? _inheritedWidgets;
   Set<InheritedElement>? _dependencies;
   bool _hadUnsatisfiedDependencies = false;
 
@@ -5242,11 +5342,11 @@ class InheritedElement extends ProxyElement {
   @override
   void _updateInheritance() {
     assert(_lifecycleState == _ElementLifecycle.active);
-    final Map<Type, InheritedElement>? incomingWidgets = _parent?._inheritedWidgets;
+    final _FooMap<Type, InheritedElement>? incomingWidgets = _parent?._inheritedWidgets;
     if (incomingWidgets != null)
-      _inheritedWidgets = HashMap<Type, InheritedElement>.of(incomingWidgets);
+      _inheritedWidgets = incomingWidgets.copy();
     else
-      _inheritedWidgets = HashMap<Type, InheritedElement>();
+      _inheritedWidgets = _FooMap<Type, InheritedElement>();
     _inheritedWidgets![widget.runtimeType] = this;
   }
 
