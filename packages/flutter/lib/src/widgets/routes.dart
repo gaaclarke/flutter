@@ -1605,7 +1605,7 @@ abstract class ModalRoute<T> extends TransitionRoute<T> with LocalHistoryRoute<T
     );
     if (semanticsDismissible && barrierDismissible) {
       // To be sorted after the _modalScope.
-      barrier = Semantics(
+      barrier = fakeSemantics(
         sortKey: const OrdinalSortKey(1.0),
         child: barrier,
       );
@@ -1620,7 +1620,7 @@ abstract class ModalRoute<T> extends TransitionRoute<T> with LocalHistoryRoute<T
   // one of the builders
   Widget _buildModalScope(BuildContext context) {
     // To be sorted before the _modalBarrier.
-    return _modalScopeCache ??= Semantics(
+    return _modalScopeCache ??= fakeSemantics(
       sortKey: const OrdinalSortKey(0.0),
       child: _ModalScope<T>(
         key: _scopeKey,
@@ -1926,7 +1926,7 @@ class RawDialogRoute<T> extends PopupRoute<T> {
 
   @override
   Widget buildPage(BuildContext context, Animation<double> animation, Animation<double> secondaryAnimation) {
-    return Semantics(
+    return fakeSemantics(
       scopesRoute: true,
       explicitChildNodes: true,
       child: DisplayFeatureSubScreen(

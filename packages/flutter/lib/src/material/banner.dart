@@ -348,7 +348,7 @@ class _MaterialBannerState extends State<MaterialBanner> {
       curve: const Threshold(0.0),
     ));
 
-    materialBanner = Semantics(
+    materialBanner = fakeSemantics(
       container: true,
       liveRegion: true,
       onDismiss: () {

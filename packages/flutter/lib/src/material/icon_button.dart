@@ -348,7 +348,7 @@ class IconButton extends StatelessWidget {
       );
     }
 
-    return Semantics(
+    return fakeSemantics(
       button: true,
       enabled: onPressed != null,
       child: InkResponse(

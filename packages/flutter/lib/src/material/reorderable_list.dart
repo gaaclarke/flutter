@@ -323,7 +323,7 @@ class _ReorderableListViewState extends State<ReorderableListView> {
     // We also apply the relevant custom accessibility actions for moving the item
     // up, down, to the start, and to the end of the list.
     return MergeSemantics(
-      child: Semantics(
+      child: fakeSemantics(
         customSemanticsActions: semanticsActions,
         child: child,
       ),

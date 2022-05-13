@@ -577,7 +577,7 @@ class _SnackBarState extends State<SnackBar> {
       );
     }
 
-    snackBar = Semantics(
+    snackBar = fakeSemantics(
       container: true,
       liveRegion: true,
       onDismiss: () {

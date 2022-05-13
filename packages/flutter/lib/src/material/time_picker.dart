@@ -354,7 +354,7 @@ class _HourControl extends StatelessWidget {
       alwaysUse24HourFormat: alwaysUse24HourFormat,
     );
 
-    return Semantics(
+    return fakeSemantics(
       value: '${localizations.timePickerHourModeAnnouncement} $formattedHour',
       excludeSemantics: true,
       increasedValue: formattedNextHour,
@@ -442,7 +442,7 @@ class _MinuteControl extends StatelessWidget {
     );
     final String formattedPreviousMinute = localizations.formatMinute(previousMinute);
 
-    return Semantics(
+    return fakeSemantics(
       excludeSemantics: true,
       value: '${localizations.timePickerMinuteModeAnnouncement} $formattedMinute',
       increasedValue: formattedNextMinute,
@@ -568,7 +568,7 @@ class _DayPeriodControl extends StatelessWidget {
       color: MaterialStateProperty.resolveAs(backgroundColor, amStates),
       child: InkWell(
         onTap: Feedback.wrapForTap(() => _setAm(context), context),
-        child: Semantics(
+        child: fakeSemantics(
           checked: amSelected,
           inMutuallyExclusiveGroup: true,
           button: true,
@@ -587,7 +587,7 @@ class _DayPeriodControl extends StatelessWidget {
       color: MaterialStateProperty.resolveAs(backgroundColor, pmStates),
       child: InkWell(
         onTap: Feedback.wrapForTap(() => _setPm(context), context),
-        child: Semantics(
+        child: fakeSemantics(
           checked: pmSelected,
           inMutuallyExclusiveGroup: true,
           button: true,

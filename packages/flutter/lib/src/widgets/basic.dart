@@ -6677,6 +6677,73 @@ class MetaData extends SingleChildRenderObjectWidget {
   }
 }
 
+Widget fakeSemantics({
+  Key? key,
+  Widget? child,
+  bool container = false,
+  bool explicitChildNodes = false,
+  bool excludeSemantics = false,
+  bool? enabled,
+  bool? checked,
+  bool? selected,
+  bool? toggled,
+  bool? button,
+  bool? slider,
+  bool? keyboardKey,
+  bool? link,
+  bool? header,
+  bool? textField,
+  bool? readOnly,
+  bool? focusable,
+  bool? focused,
+  bool? inMutuallyExclusiveGroup,
+  bool? obscured,
+  bool? multiline,
+  bool? scopesRoute,
+  bool? namesRoute,
+  bool? hidden,
+  bool? image,
+  bool? liveRegion,
+  int? maxValueLength,
+  int? currentValueLength,
+  String? label,
+  AttributedString? attributedLabel,
+  String? value,
+  AttributedString? attributedValue,
+  String? increasedValue,
+  AttributedString? attributedIncreasedValue,
+  String? decreasedValue,
+  AttributedString? attributedDecreasedValue,
+  String? hint,
+  AttributedString? attributedHint,
+  String? tooltip,
+  String? onTapHint,
+  String? onLongPressHint,
+  TextDirection? textDirection,
+  SemanticsSortKey? sortKey,
+  SemanticsTag? tagForChildren,
+  VoidCallback? onTap,
+  VoidCallback? onLongPress,
+  VoidCallback? onScrollLeft,
+  VoidCallback? onScrollRight,
+  VoidCallback? onScrollUp,
+  VoidCallback? onScrollDown,
+  VoidCallback? onIncrease,
+  VoidCallback? onDecrease,
+  VoidCallback? onCopy,
+  VoidCallback? onCut,
+  VoidCallback? onPaste,
+  VoidCallback? onDismiss,
+  MoveCursorHandler? onMoveCursorForwardByCharacter,
+  MoveCursorHandler? onMoveCursorBackwardByCharacter,
+  SetSelectionHandler? onSetSelection,
+  SetTextHandler? onSetText,
+  VoidCallback? onDidGainAccessibilityFocus,
+  VoidCallback? onDidLoseAccessibilityFocus,
+  Map<CustomSemanticsAction, VoidCallback>? customSemanticsActions,
+}) {
+  return child ?? Semantics();
+}
 
 // UTILITY NODES
 
@@ -7197,6 +7264,12 @@ class ExcludeSemantics extends SingleChildRenderObjectWidget {
   }
 }
 
+Widget fakeIndexedSemantics({
+    Key? key,
+    required int index,
+    Widget? child,
+  }) => child ?? fakeIndexedSemantics(key: key, index: index, child:child);
+
 /// A widget that annotates the child semantics with an index.
 ///
 /// Semantic indexes are used by TalkBack/Voiceover to make announcements about
@@ -7217,9 +7290,9 @@ class ExcludeSemantics extends SingleChildRenderObjectWidget {
 ///   addSemanticIndexes: false,
 ///   semanticChildCount: 2,
 ///   children: const <Widget>[
-///     IndexedSemantics(index: 0, child: Text('First')),
+///     fakeIndexedSemantics(index: 0, child: Text('First')),
 ///     Spacer(),
-///     IndexedSemantics(index: 1, child: Text('Second')),
+///     fakeIndexedSemantics(index: 1, child: Text('Second')),
 ///     Spacer(),
 ///   ],
 /// )

@@ -1287,7 +1287,7 @@ class _ImageState extends State<Image> with WidgetsBindingObserver {
     );
 
     if (!widget.excludeFromSemantics) {
-      result = Semantics(
+      result = fakeSemantics(
         container: widget.semanticLabel != null,
         image: true,
         label: widget.semanticLabel ?? '',

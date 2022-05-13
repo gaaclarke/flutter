@@ -3291,7 +3291,7 @@ class EditableTextState extends State<EditableText> with AutomaticKeepAliveClien
               viewportBuilder: (BuildContext context, ViewportOffset offset) {
                 return CompositedTransformTarget(
                   link: _toolbarLayerLink,
-                  child: Semantics(
+                  child: fakeSemantics(
                     onCopy: _semanticsOnCopy(controls),
                     onCut: _semanticsOnCut(controls),
                     onPaste: _semanticsOnPaste(controls),

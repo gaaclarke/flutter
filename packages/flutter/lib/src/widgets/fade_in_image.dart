@@ -432,7 +432,7 @@ class _FadeInImageState extends State<FadeInImage> {
     );
 
     if (!widget.excludeFromSemantics) {
-      result = Semantics(
+      result = fakeSemantics(
         container: widget.imageSemanticLabel != null,
         image: true,
         label: widget.imageSemanticLabel ?? '',

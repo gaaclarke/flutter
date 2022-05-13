@@ -212,7 +212,7 @@ class Drawer extends StatelessWidget {
       case TargetPlatform.windows:
         label = semanticLabel ?? MaterialLocalizations.of(context).drawerLabel;
     }
-    return Semantics(
+    return fakeSemantics(
       scopesRoute: true,
       namesRoute: true,
       explicitChildNodes: true,
@@ -624,7 +624,7 @@ class DrawerControllerState extends State<DrawerController> with SingleTickerPro
                   excluding: platformHasBackButton,
                   child: GestureDetector(
                     onTap: close,
-                    child: Semantics(
+                    child: fakeSemantics(
                       label: MaterialLocalizations.of(context).modalBarrierDismissLabel,
                       child: MouseRegion(
                         child: Container( // The drawer's "scrim"

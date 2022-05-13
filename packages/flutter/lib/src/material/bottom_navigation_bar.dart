@@ -544,13 +544,13 @@ class _BottomNavigationTile extends StatelessWidget {
       );
     }
 
-    result = Semantics(
+    result = fakeSemantics(
       selected: selected,
       container: true,
       child: Stack(
         children: <Widget>[
           result,
-          Semantics(
+          fakeSemantics(
             label: indexLabel,
           ),
         ],
@@ -1007,7 +1007,7 @@ class _BottomNavigationBarState extends State<BottomNavigationBar> with TickerPr
         break;
     }
 
-    return Semantics(
+    return fakeSemantics(
       explicitChildNodes: true,
       child: _Bar(
         layout: layout,

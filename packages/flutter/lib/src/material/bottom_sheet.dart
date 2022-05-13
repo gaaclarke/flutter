@@ -431,7 +431,7 @@ class _ModalBottomSheetState<T> extends State<_ModalBottomSheet<T>> {
         final double animationValue = animationCurve.transform(
             mediaQuery.accessibleNavigation ? 1.0 : widget.route!.animation!.value,
         );
-        return Semantics(
+        return fakeSemantics(
           scopesRoute: true,
           namesRoute: true,
           label: routeLabel,

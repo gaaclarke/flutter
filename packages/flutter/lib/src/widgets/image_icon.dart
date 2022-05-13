@@ -70,7 +70,7 @@ class ImageIcon extends StatelessWidget {
     final double? iconSize = size ?? iconTheme.size;
 
     if (image == null)
-      return Semantics(
+      return fakeSemantics(
         label: semanticLabel,
         child: SizedBox(width: iconSize, height: iconSize),
       );
@@ -81,7 +81,7 @@ class ImageIcon extends StatelessWidget {
     if (iconOpacity != null && iconOpacity != 1.0)
       iconColor = iconColor.withOpacity(iconColor.opacity * iconOpacity);
 
-    return Semantics(
+    return fakeSemantics(
       label: semanticLabel,
       child: Image(
         image: image!,

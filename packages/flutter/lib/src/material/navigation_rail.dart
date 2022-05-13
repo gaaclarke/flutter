@@ -401,7 +401,7 @@ class _NavigationRailState extends State<NavigationRail> with TickerProviderStat
 
     return _ExtendedNavigationRailAnimation(
       animation: _extendedAnimation,
-      child: Semantics(
+      child: fakeSemantics(
         explicitChildNodes: true,
         child: Material(
           elevation: elevation,
@@ -725,7 +725,7 @@ class _RailDestination extends StatelessWidget {
     }
 
     final ColorScheme colors = Theme.of(context).colorScheme;
-    return Semantics(
+    return fakeSemantics(
       container: true,
       selected: selected,
       child: Stack(
@@ -743,7 +743,7 @@ class _RailDestination extends StatelessWidget {
               child: content,
             ),
           ),
-          Semantics(
+          fakeSemantics(
             label: indexLabel,
           ),
         ],

@@ -5124,6 +5124,11 @@ class RenderExcludeSemantics extends RenderProxyBox {
   }
 }
 
+RenderBox? fakeRenderIndexedSemantics({
+    RenderBox? child,
+    required int index,
+  }) => child;
+
 /// A render objects that annotates semantics with an index.
 ///
 /// Certain widgets will automatically provide a child index for building

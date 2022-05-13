@@ -296,7 +296,7 @@ class _FlexibleSpaceBarState extends State<FlexibleSpaceBar> {
             case TargetPlatform.fuchsia:
             case TargetPlatform.linux:
             case TargetPlatform.windows:
-              title = Semantics(
+              title = fakeSemantics(
                 namesRoute: true,
                 child: widget.title,
               );

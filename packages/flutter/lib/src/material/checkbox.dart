@@ -466,7 +466,7 @@ class _CheckboxState extends State<Checkbox> with TickerProviderStateMixin, Togg
       ?? checkboxTheme.checkColor?.resolve(states)
       ?? const Color(0xFFFFFFFF);
 
-    return Semantics(
+    return fakeSemantics(
       checked: widget.value ?? false,
       child: buildToggleable(
         mouseCursor: effectiveMouseCursor,

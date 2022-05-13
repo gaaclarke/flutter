@@ -162,7 +162,7 @@ class Card extends StatelessWidget {
     final CardTheme cardTheme = CardTheme.of(context);
     final CardTheme defaults = Theme.of(context).useMaterial3 ? _TokenDefaultsM3(context) : _DefaultsM2(context);
 
-    return Semantics(
+    return fakeSemantics(
       container: semanticContainer,
       child: Container(
         margin: margin ?? cardTheme.margin ?? defaults.margin!,
@@ -175,7 +175,7 @@ class Card extends StatelessWidget {
           shape: shape ?? cardTheme.shape ?? defaults.shape,
           borderOnForeground: borderOnForeground,
           clipBehavior: clipBehavior ?? cardTheme.clipBehavior ?? defaults.clipBehavior!,
-          child: Semantics(
+          child: fakeSemantics(
             explicitChildNodes: !semanticContainer,
             child: child,
           ),

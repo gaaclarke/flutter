@@ -425,7 +425,7 @@ class _RawMaterialButtonState extends State<RawMaterialButton> with MaterialStat
         break;
     }
 
-    return Semantics(
+    return fakeSemantics(
       container: true,
       button: true,
       enabled: widget.enabled,

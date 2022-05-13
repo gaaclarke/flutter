@@ -877,7 +877,7 @@ class _TextFieldState extends State<TextField> with RestorationMixin implements 
       );
       // If buildCounter returns null, don't add a counter widget to the field.
       if (builtCounter != null) {
-        counter = Semantics(
+        counter = fakeSemantics(
           container: true,
           liveRegion: isFocused,
           child: builtCounter,
@@ -1321,7 +1321,7 @@ class _TextFieldState extends State<TextField> with RestorationMixin implements 
           child: AnimatedBuilder(
             animation: controller, // changes the _currentLength
             builder: (BuildContext context, Widget? child) {
-              return Semantics(
+              return fakeSemantics(
                 maxValueLength: semanticsMaxValueLength,
                 currentValueLength: _currentLength,
                 onTap: widget.readOnly ? null : () {

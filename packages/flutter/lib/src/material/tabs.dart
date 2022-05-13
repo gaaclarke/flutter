@@ -1236,7 +1236,7 @@ class _TabBarState extends State<TabBar> {
           child: Stack(
             children: <Widget>[
               wrappedTabs[index],
-              Semantics(
+              fakeSemantics(
                 selected: index == _currentIndex,
                 label: localizations.tabLabel(tabIndex: index + 1, tabCount: tabCount),
               ),
@@ -1700,7 +1700,7 @@ class TabPageSelector extends StatelessWidget {
     return AnimatedBuilder(
       animation: animation,
       builder: (BuildContext context, Widget? child) {
-        return Semantics(
+        return fakeSemantics(
           label: localizations.tabLabel(tabIndex: tabController.index + 1, tabCount: tabController.length),
           child: Row(
             mainAxisSize: MainAxisSize.min,

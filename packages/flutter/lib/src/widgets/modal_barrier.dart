@@ -130,7 +130,7 @@ class ModalBarrier extends StatelessWidget {
         excluding: !semanticsDismissible || !modalBarrierSemanticsDismissible,
         child: _ModalBarrierGestureDetector(
           onDismiss: handleDismiss,
-          child: Semantics(
+          child: fakeSemantics(
             label: semanticsDismissible ? semanticsLabel : null,
             onDismiss: semanticsDismissible ? handleDismiss : null,
             textDirection: semanticsDismissible && semanticsLabel != null ? Directionality.of(context) : null,

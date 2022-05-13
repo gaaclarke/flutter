@@ -112,7 +112,7 @@ class AnimatedIcon extends StatelessWidget {
     Color iconColor = color ?? iconTheme.color!;
     if (iconOpacity != 1.0)
       iconColor = iconColor.withOpacity(iconColor.opacity * iconOpacity);
-    return Semantics(
+    return fakeSemantics(
       label: semanticLabel,
       child: CustomPaint(
         size: Size(iconSize, iconSize),

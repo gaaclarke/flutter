@@ -370,7 +370,7 @@ class PopupMenuItemState<T, W extends PopupMenuItem<T>> extends State<W> {
     }
 
     return MergeSemantics(
-      child: Semantics(
+      child: fakeSemantics(
         enabled: widget.enabled,
         button: true,
         child: InkWell(
@@ -579,7 +579,7 @@ class _PopupMenu<T> extends StatelessWidget {
       ),
       child: IntrinsicWidth(
         stepWidth: _kMenuWidthStep,
-        child: Semantics(
+        child: fakeSemantics(
           scopesRoute: true,
           namesRoute: true,
           explicitChildNodes: true,

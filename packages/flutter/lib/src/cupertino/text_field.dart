@@ -1283,7 +1283,7 @@ class _CupertinoTextFieldState extends State<CupertinoTextField> with Restoratio
       ),
     );
 
-    return Semantics(
+    return fakeSemantics(
       enabled: enabled,
       onTap: !enabled || widget.readOnly ? null : () {
         if (!controller.selection.isValid) {

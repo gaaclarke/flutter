@@ -320,7 +320,7 @@ mixin ToggleableStateMixin<S extends StatefulWidget> on TickerProviderStateMixin
         onTap: _handleTap,
         onTapUp: _handleTapEnd,
         onTapCancel: _handleTapEnd,
-        child: Semantics(
+        child: fakeSemantics(
           enabled: isInteractive,
           child: CustomPaint(
             size: size,

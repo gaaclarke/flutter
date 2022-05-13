@@ -481,7 +481,7 @@ class SliverChildBuilderDelegate extends SliverChildDelegate {
     if (addSemanticIndexes) {
       final int? semanticIndex = semanticIndexCallback(child, index);
       if (semanticIndex != null)
-        child = IndexedSemantics(index: semanticIndex + semanticIndexOffset, child: child);
+        child = fakeIndexedSemantics(index: semanticIndex + semanticIndexOffset, child: child);
     }
     if (addAutomaticKeepAlives)
       child = AutomaticKeepAlive(child: child);
@@ -745,7 +745,7 @@ class SliverChildListDelegate extends SliverChildDelegate {
     if (addSemanticIndexes) {
       final int? semanticIndex = semanticIndexCallback(child, index);
       if (semanticIndex != null)
-        child = IndexedSemantics(index: semanticIndex + semanticIndexOffset, child: child);
+        child = fakeIndexedSemantics(index: semanticIndex + semanticIndexOffset, child: child);
     }
     if (addAutomaticKeepAlives)
       child = AutomaticKeepAlive(child: child);

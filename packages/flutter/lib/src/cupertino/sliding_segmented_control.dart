@@ -651,7 +651,7 @@ class _SegmentedControlState<T> extends State<CupertinoSlidingSegmentedControl<T
       }
 
       children.add(
-        Semantics(
+        fakeSemantics(
           button: true,
           onTap: () { widget.onValueChanged(entry.key); },
           inMutuallyExclusiveGroup: true,

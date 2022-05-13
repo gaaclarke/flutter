@@ -742,7 +742,7 @@ class _MaterialSwitchState extends State<_MaterialSwitch> with TickerProviderSta
         ?? MaterialStateProperty.resolveAs<MouseCursor>(MaterialStateMouseCursor.clickable, states);
     });
 
-    return Semantics(
+    return fakeSemantics(
       toggled: widget.value,
       child: GestureDetector(
         excludeFromSemantics: true,

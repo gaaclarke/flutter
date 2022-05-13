@@ -908,7 +908,7 @@ class _AppBarState extends State<AppBar> {
 
       title = _AppBarTitleBox(child: title);
       if (!widget.excludeHeaderSemantics) {
-        title = Semantics(
+        title = fakeSemantics(
           namesRoute: namesRoute,
           header: true,
           child: title,
@@ -1023,12 +1023,12 @@ class _AppBarState extends State<AppBar> {
       appBar = Stack(
         fit: StackFit.passthrough,
         children: <Widget>[
-          Semantics(
+          fakeSemantics(
             sortKey: const OrdinalSortKey(1.0),
             explicitChildNodes: true,
             child: widget.flexibleSpace,
           ),
-          Semantics(
+          fakeSemantics(
             sortKey: const OrdinalSortKey(0.0),
             explicitChildNodes: true,
             // Creates a material widget to prevent the flexibleSpace from
@@ -1052,7 +1052,7 @@ class _AppBarState extends State<AppBar> {
         ?? appBarTheme.systemOverlayStyle
         ?? _systemOverlayStyleForBrightness(ThemeData.estimateBrightnessForColor(backgroundColor));
 
-    return Semantics(
+    return fakeSemantics(
       container: true,
       child: AnnotatedRegion<SystemUiOverlayStyle>(
         value: overlayStyle,
@@ -1065,7 +1065,7 @@ class _AppBarState extends State<AppBar> {
             ?? appBarTheme.shadowColor
             ?? _defaultShadowColor,
           shape: widget.shape ?? appBarTheme.shape,
-          child: Semantics(
+          child: fakeSemantics(
             explicitChildNodes: true,
             child: appBar,
           ),
@@ -1194,7 +1194,7 @@ class _SliverAppBarDelegate extends SliverPersistentHeaderDelegate {
         title: title,
         actions: actions,
         flexibleSpace: (title == null && flexibleSpace != null && !excludeHeaderSemantics)
-          ? Semantics(
+          ? fakeSemantics(
               header: true,
               child: flexibleSpace,
             )

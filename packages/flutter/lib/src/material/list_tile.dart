@@ -761,7 +761,7 @@ class ListTile extends StatelessWidget {
       hoverColor: hoverColor,
       autofocus: autofocus,
       enableFeedback: enableFeedback ?? tileTheme.enableFeedback ?? true,
-      child: Semantics(
+      child: fakeSemantics(
         selected: selected,
         enabled: enabled,
         child: Ink(

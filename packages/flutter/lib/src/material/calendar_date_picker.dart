@@ -378,7 +378,7 @@ class _DatePickerModeToggleButtonState extends State<_DatePickerModeToggleButton
       child: Row(
         children: <Widget>[
           Flexible(
-            child: Semantics(
+            child: fakeSemantics(
               label: MaterialLocalizations.of(context).selectYearSemanticsLabel,
               excludeSemantics: true,
               button: true,
@@ -738,7 +738,7 @@ class _MonthPickerState extends State<_MonthPicker> {
   Widget build(BuildContext context) {
     final Color controlColor = Theme.of(context).colorScheme.onSurface.withOpacity(0.60);
 
-    return Semantics(
+    return fakeSemantics(
       child: Column(
         children: <Widget>[
           Container(
@@ -1005,7 +1005,7 @@ class _DayPickerState extends State<_DayPicker> {
             onTap: () => widget.onChanged(dayToBuild),
             radius: _dayPickerRowHeight / 2 + 4,
             splashColor: selectedDayBackground.withOpacity(0.38),
-            child: Semantics(
+            child: fakeSemantics(
               // We want the day of month to be spoken first irrespective of the
               // locale-specific preferences or TextDirection. This is because
               // an accessibility user is more likely to be interested in the
@@ -1205,7 +1205,7 @@ class _YearPickerState extends State<YearPicker> {
         height: decorationHeight,
         width: decorationWidth,
         child: Center(
-          child: Semantics(
+          child: fakeSemantics(
             selected: isSelected,
             button: true,
             child: Text(year.toString(), style: itemStyle),

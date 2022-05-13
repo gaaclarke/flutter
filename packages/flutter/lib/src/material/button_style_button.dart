@@ -399,7 +399,7 @@ class _ButtonStyleState extends State<ButtonStyleButton> with MaterialStateMixin
         break;
     }
 
-    return Semantics(
+    return fakeSemantics(
       container: true,
       button: true,
       enabled: widget.enabled,

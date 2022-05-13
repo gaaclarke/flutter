@@ -1114,7 +1114,7 @@ class _InkResponseState extends State<_InkResponseStateWidget>
             cursor: effectiveMouseCursor,
             onEnter: _handleMouseEnter,
             onExit: _handleMouseExit,
-            child: Semantics(
+            child: fakeSemantics(
               onTap: widget.excludeFromSemantics || widget.onTap == null ? null : _simulateTap,
               onLongPress: widget.excludeFromSemantics || widget.onLongPress == null ? null : _simulateLongPress,
               child: GestureDetector(

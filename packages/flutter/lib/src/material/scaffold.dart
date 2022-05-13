@@ -3042,7 +3042,7 @@ class _StandardBottomSheetState extends State<_StandardBottomSheet> {
   }
 
   Widget _wrapBottomSheet(Widget bottomSheet) {
-    return Semantics(
+    return fakeSemantics(
       container: true,
       onDismiss: close,
       child:  NotificationListener<DraggableScrollableNotification>(

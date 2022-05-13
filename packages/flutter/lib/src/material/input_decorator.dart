@@ -371,7 +371,7 @@ class _HelperErrorState extends State<_HelperError> with SingleTickerProviderSta
 
   Widget _buildHelper() {
     assert(widget.helperText != null);
-    return Semantics(
+    return fakeSemantics(
       container: true,
       child: FadeTransition(
         opacity: Tween<double>(begin: 1.0, end: 0.0).animate(_controller),
@@ -388,7 +388,7 @@ class _HelperErrorState extends State<_HelperError> with SingleTickerProviderSta
 
   Widget _buildError() {
     assert(widget.errorText != null);
-    return Semantics(
+    return fakeSemantics(
       container: true,
       liveRegion: true,
       child: FadeTransition(
@@ -2250,7 +2250,7 @@ class _InputDecoratorState extends State<InputDecorator> with TickerProviderStat
     if (decoration!.counter != null) {
       counter = decoration!.counter;
     } else if (decoration!.counterText != null && decoration!.counterText != '') {
-      counter = Semantics(
+      counter = fakeSemantics(
         container: true,
         liveRegion: isFocused,
         child: Text(

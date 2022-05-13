@@ -1065,7 +1065,7 @@ class _RawChipState extends State<RawChip> with MaterialStateMixin, TickerProvid
     if (!hasDeleteButton) {
       return null;
     }
-    return Semantics(
+    return fakeSemantics(
       container: true,
       button: true,
       child: _wrapWithTooltip(
@@ -1256,7 +1256,7 @@ class _RawChipState extends State<RawChip> with MaterialStateMixin, TickerProvid
         child: result,
       ),
     );
-    return Semantics(
+    return fakeSemantics(
       button: widget.tapEnabled,
       container: true,
       selected: widget.selected,

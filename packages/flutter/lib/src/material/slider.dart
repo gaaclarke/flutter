@@ -735,7 +735,7 @@ class _SliderState extends State<Slider> with TickerProviderStateMixin {
         break;
     }
 
-    return Semantics(
+    return fakeSemantics(
       container: true,
       slider: true,
       onDidGainAccessibilityFocus: handleDidGainAccessibilityFocus,

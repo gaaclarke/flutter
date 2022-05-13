@@ -538,7 +538,7 @@ class Text extends StatelessWidget {
       ),
     );
     if (semanticsLabel != null) {
-      result = Semantics(
+      result = fakeSemantics(
         textDirection: textDirection,
         label: semanticsLabel,
         child: ExcludeSemantics(

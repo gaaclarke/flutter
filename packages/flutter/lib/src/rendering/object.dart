@@ -1856,6 +1856,7 @@ abstract class RenderObject extends AbstractNode with DiagnosticableTreeMixin im
   /// work to update its layout information.
   @pragma('vm:notify-debugger-on-exception')
   void layout(Constraints constraints, { bool parentUsesSize = false }) {
+    //print('layout $runtimeType');
     assert(!_debugDisposed);
     if (!kReleaseMode && debugProfileLayoutsEnabled) {
       Map<String, String>? debugTimelineArguments;

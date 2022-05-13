@@ -117,7 +117,7 @@ mixin MaterialRouteTransitionMixin<T> on PageRoute<T> {
       }
       return true;
     }());
-    return Semantics(
+    return fakeSemantics(
       scopesRoute: true,
       explicitChildNodes: true,
       child: result,

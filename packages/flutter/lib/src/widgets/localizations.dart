@@ -570,7 +570,7 @@ class _LocalizationsState extends State<Localizations> {
   Widget build(BuildContext context) {
     if (_locale == null)
       return Container();
-    return Semantics(
+    return fakeSemantics(
       textDirection: _textDirection,
       child: _LocalizationsScope(
         key: _localizedResourcesScopeKey,

@@ -430,7 +430,7 @@ class _RadioState<T> extends State<Radio<T>> with TickerProviderStateMixin, Togg
         ?? radioTheme.overlayColor?.resolve(inactivePressedStates)
         ?? effectiveActiveColor.withAlpha(kRadialReactionAlpha);
 
-    return Semantics(
+    return fakeSemantics(
       inMutuallyExclusiveGroup: true,
       checked: widget._selected,
       child: buildToggleable(
