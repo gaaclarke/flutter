@@ -32,10 +32,6 @@ bool RenderTextInCanvasSkia(DlCanvas* canvas,
   DlPaint text_paint;
   text_paint.setColor(options.color);
   text_paint.setMaskFilter(options.mask_filter);
-  // text_paint.mask_blur_descriptor = options.mask_blur_descriptor;
-  // text_paint.stroke_width = 1;
-  // text_paint.style =
-  //     options.stroke ? Paint::Style::kStroke : Paint::Style::kFill;
   canvas->DrawTextFrame(frame, position.x(), position.y(), text_paint);
   return true;
 }
