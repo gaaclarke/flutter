@@ -14,6 +14,16 @@
 #include "flutter/testing/testing.h"
 #include "gtest/gtest.h"
 
+#include "third_party/skia/include/codec/SkEncodedImageFormat.h"
+#include "third_party/skia/include/core/SkBitmap.h"
+#include "third_party/skia/include/core/SkCanvas.h"
+#include "third_party/skia/include/core/SkColorSpace.h"
+#include "third_party/skia/include/core/SkFont.h"
+#include "third_party/skia/include/core/SkStream.h"
+#include "third_party/skia/include/core/SkSurface.h"
+#include "third_party/skia/include/encode/SkPngEncoder.h"
+#include "txt/platform.h"
+
 namespace flutter {
 namespace testing {
 
@@ -312,6 +322,43 @@ TEST_P(DlGoldenTest, DashedLinesTest) {
   ASSERT_TRUE(OpenPlaygroundHere(builder.Build()));
 }
 
+namespace {
+class SkiaScreenshot : public impeller::testing::Screenshot {
+ public:
+  SkiaScreenshot(const SkBitmap& bitmap) : bitmap_(bitmap) {}
+
+  const uint8_t* GetBytes() const override {
+    return static_cast<const uint8_t*>(bitmap_.getPixels());
+  }
+
+  size_t GetHeight() const override { return bitmap_.height(); }
+
+  size_t GetWidth() const override { return bitmap_.width(); }
+
+  size_t GetBytesPerRow() const override { return bitmap_.rowBytes(); }
+
+  bool WriteToPNG(const std::string& path) const override {
+    SkPixmap pixmap;
+    if (!bitmap_.peekPixels(&pixmap)) {
+      return false;
+    }
+    SkFILEWStream stream(path.c_str());
+    if (!stream.isValid()) {
+      return false;
+    }
+    SkPngEncoder::Options options;
+    if (!SkPngEncoder::Encode(&stream, pixmap, options)) {
+      return false;
+    }
+
+    return true;
+  }
+
+ private:
+  SkBitmap bitmap_;
+};
+}  // namespace
+
 TEST_P(DlGoldenTest, SaveLayerAtFractionalValue) {
   // Draws a stroked rounded rect at a fractional pixel value. The coverage must
   // be adjusted so that we still have room to draw it, even though it lies on
@@ -340,7 +387,8 @@ TEST_P(DlGoldenTest, SaveLayerAtFractionalValue) {
 TEST_P(DlGoldenTest, TextJumpingTest) {
   SetWindowSize(impeller::ISize(1024, 200));
   impeller::Scalar font_size = 150;
-  auto callback = [&](impeller::Scalar scale) -> sk_sp<DisplayList> {
+  auto impeller_draw = [&](impeller::Scalar scale)
+      -> std::unique_ptr<impeller::testing::Screenshot> {
     DisplayListBuilder builder;
     DlPaint paint;
     paint.setColor(DlColor::ARGB(1, 0.1, 0.1, 0.1));
@@ -363,38 +411,60 @@ TEST_P(DlGoldenTest, TextJumpingTest) {
                            TextRenderOptions{
                                .font_size = font_size,
                            });
-    std::shared_ptr<DlImageFilter> filter =
-        DlImageFilter::MakeMatrix(DlMatrix(                  //
-                                      1.0 / scale, 0, 0, 0,  //
-                                      0, 1.0 / scale, 0, 0,  //
-                                      0, 0, 1, 0,            //
-                                      0, 0, 0, 1),
-                                  DlImageSampling::kLinear);
-    builder.SaveLayer(std::nullopt, nullptr, filter.get());
-    builder.Restore();
-    return builder.Build();
+    return MakeScreenshot(builder.Build());
   };
 
-  double max_rmse = 0.0;
+  auto skia_draw = [&](impeller::Scalar scale)
+      -> std::unique_ptr<impeller::testing::Screenshot> {
+    SkBitmap bitmap;
+    SkImageInfo info = SkImageInfo::Make(
+        SkISize::Make(1024, 200),
+        SkColorInfo(kRGBA_8888_SkColorType, kPremul_SkAlphaType,
+                    SkColorSpace::MakeSRGB()));
+    bitmap.setInfo(info);
+    if (!bitmap.tryAllocPixels()) {
+      return nullptr;
+    }
+    auto surface = SkSurfaces::WrapPixels(bitmap.pixmap());
+    if (!surface) {
+      return nullptr;
+    }
+    auto canvas = surface->getCanvas();
+    if (!canvas) {
+      return nullptr;
+    }
+
+    canvas->clear(SkColor4f{0.1f, 0.1f, 0.1f, 1.0f}.toSkColor());
+
+    auto mapping = flutter::testing::OpenFixtureAsSkData("Roboto-Regular.ttf");
+    sk_sp<SkFontMgr> font_mgr = txt::GetDefaultFontManager();
+    SkFont sk_font(font_mgr->makeFromData(mapping), font_size);
+
+    SkPaint paint;
+    paint.setAntiAlias(true);
+    paint.setColor(SK_ColorYELLOW);
+
+    canvas->scale(scale, scale);
+    canvas->drawString("the quick brown", 10, 150, sk_font, paint);
+
+    return std::make_unique<SkiaScreenshot>(bitmap);
+  };
+
   impeller::Scalar current_scalar = 0.440;
-  std::unique_ptr<impeller::testing::Screenshot> left;
   std::unique_ptr<impeller::testing::Screenshot> right =
-      MakeScreenshot(callback(current_scalar));
+      impeller_draw(current_scalar);
   if (!right) {
     GTEST_SKIP() << "making screenshots not supported.";
   }
-  for (int i = 0; i < 10; ++i) {
-    current_scalar += 0.001;
-    left = std::move(right);
-    right = MakeScreenshot(callback(current_scalar));
-    double rmse = RMSE(left.get(), right.get());
-    max_rmse = std::max(rmse, max_rmse);
-  }
+  std::unique_ptr<impeller::testing::Screenshot> left =
+      skia_draw(current_scalar);
+  left->WriteToPNG("/Users/aaclarke/foo.png");
+  double rmse = RMSE(left.get(), right.get());
 
   // This value was 29.273919756836246 when this test was first written.
   // The threshold was changed to 14 after vertex shader pixel snapping was
   // introduced.
-  EXPECT_TRUE(max_rmse < 29.5) << "rmse: " << max_rmse;
+  EXPECT_TRUE(rmse < 29.5) << "rmse: " << rmse;
 }
 
 }  // namespace testing
