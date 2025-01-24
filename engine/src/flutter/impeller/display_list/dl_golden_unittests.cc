@@ -386,7 +386,8 @@ TEST_P(DlGoldenTest, SaveLayerAtFractionalValue) {
 
 TEST_P(DlGoldenTest, TextJumpingTest) {
   SetWindowSize(impeller::ISize(1024, 200));
-  impeller::Scalar font_size = 150;
+  impeller::Scalar font_size = 300;
+  auto draw_point = SkPoint::Make(10, 300);
   auto impeller_draw = [&](impeller::Scalar scale)
       -> std::unique_ptr<impeller::testing::Screenshot> {
     DisplayListBuilder builder;
@@ -407,7 +408,7 @@ TEST_P(DlGoldenTest, TextJumpingTest) {
     // Note: The ahem font just has full blocks in it.
     RenderTextInCanvasSkia(&builder,
                            "the quick brown fox jumped over the lazy dog!.?",
-                           "Roboto-Regular.ttf", SkPoint::Make(10, 150),
+                           "Roboto-Regular.ttf", draw_point,
                            TextRenderOptions{
                                .font_size = font_size,
                            });
@@ -445,13 +446,13 @@ TEST_P(DlGoldenTest, TextJumpingTest) {
     paint.setColor(SK_ColorYELLOW);
 
     canvas->scale(scale, scale);
-    canvas->drawString("the quick brown fox jumped over the", 10, 150, sk_font,
-                       paint);
+    canvas->drawString("the quick brown fox jumped over the", draw_point.x(),
+                       draw_point.y(), sk_font, paint);
 
     return std::make_unique<SkiaScreenshot>(bitmap);
   };
 
-  impeller::Scalar current_scalar = 0.440;
+  impeller::Scalar current_scalar = 0.444;
   std::unique_ptr<impeller::testing::Screenshot> right =
       impeller_draw(current_scalar);
   if (!right) {
