@@ -445,7 +445,8 @@ TEST_P(DlGoldenTest, TextJumpingTest) {
     paint.setColor(SK_ColorYELLOW);
 
     canvas->scale(scale, scale);
-    canvas->drawString("the quick brown", 10, 150, sk_font, paint);
+    canvas->drawString("the quick brown fox jumped over the", 10, 150, sk_font,
+                       paint);
 
     return std::make_unique<SkiaScreenshot>(bitmap);
   };
@@ -458,13 +459,14 @@ TEST_P(DlGoldenTest, TextJumpingTest) {
   }
   std::unique_ptr<impeller::testing::Screenshot> left =
       skia_draw(current_scalar);
-  left->WriteToPNG("/Users/aaclarke/foo.png");
+  left->WriteToPNG("/Users/aaclarke/left.png");
+  right->WriteToPNG("/Users/aaclarke/right.png");
   double rmse = RMSE(left.get(), right.get());
 
   // This value was 29.273919756836246 when this test was first written.
   // The threshold was changed to 14 after vertex shader pixel snapping was
   // introduced.
-  EXPECT_TRUE(rmse < 29.5) << "rmse: " << rmse;
+  EXPECT_TRUE(rmse < 0) << "rmse: " << rmse;
 }
 
 }  // namespace testing
