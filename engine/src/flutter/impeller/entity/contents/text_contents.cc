@@ -108,24 +108,6 @@ void TextContents::ComputeVertexData(
     Scalar rounded_scale = TextFrame::RoundScaledFontSize(scale);
     FontGlyphAtlas* font_atlas = nullptr;
 
-    // Adjust glyph position based on the subpixel rounding
-    // used by the font.
-    Point subpixel_adjustment(0.5, 0.5);
-    switch (font.GetAxisAlignment()) {
-      case AxisAlignment::kNone:
-        break;
-      case AxisAlignment::kX:
-        subpixel_adjustment.x = 0.125;
-        break;
-      case AxisAlignment::kY:
-        subpixel_adjustment.y = 0.125;
-        break;
-      case AxisAlignment::kAll:
-        subpixel_adjustment.x = 0.125;
-        subpixel_adjustment.y = 0.125;
-        break;
-    }
-
     Point screen_offset = (entity_transform * Point(0, 0));
     for (const TextRun::GlyphPosition& glyph_position :
          run.GetGlyphPositions()) {
@@ -133,6 +115,9 @@ void TextContents::ComputeVertexData(
       bounds_offset++;
       auto atlas_glyph_bounds = frame_bounds.atlas_bounds;
       auto glyph_bounds = frame_bounds.glyph_bounds;
+
+      Point subpixel = TextFrame::ComputeSubpixelPosition(
+          glyph_position, font.GetAxisAlignment(), offset, rounded_scale);
 
       // If frame_bounds.is_placeholder is true, this is the first frame
       // the glyph has been rendered and so its atlas position was not
@@ -148,9 +133,6 @@ void TextContents::ComputeVertexData(
           VALIDATION_LOG << "Could not find font in the atlas.";
           continue;
         }
-        Point subpixel = TextFrame::ComputeSubpixelPosition(
-            glyph_position, font.GetAxisAlignment(), offset, rounded_scale);
-
         std::optional<FrameBounds> maybe_atlas_glyph_bounds =
             font_atlas->FindGlyphBounds(SubpixelGlyph{
                 glyph_position.glyph,  //
@@ -181,14 +163,13 @@ void TextContents::ComputeVertexData(
           (basis_transform * glyph_position.position);
 
       Point screen_glyph_position =
-          (screen_offset + unrounded_glyph_position + subpixel_adjustment)
-              .Floor();
+          (screen_offset + unrounded_glyph_position).Floor();
       for (const Point& point : unit_points) {
         Point position;
         if (is_translation_scale) {
           position = (screen_glyph_position +
                       (basis_transform * point * scaled_bounds.GetSize()))
-                         .Round();
+                         .Round() - subpixel;
         } else {
           position = entity_transform *
                      (glyph_position.position + scaled_bounds.GetLeftTop() +
