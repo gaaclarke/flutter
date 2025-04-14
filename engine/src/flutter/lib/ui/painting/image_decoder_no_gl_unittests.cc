@@ -197,6 +197,47 @@ TEST(ImageDecoderNoGLTest, ImpellerWideGamutIndexedPng) {
 #endif  // IMPELLER_SUPPORTS_RENDERING
 }
 
+TEST(ImageDecoderNoGLTest, ImpellerWideGamutProPhoto) {
+#if defined(OS_FUCHSIA)
+  GTEST_SKIP() << "Fuchsia can't load the test fixtures.";
+#endif
+  auto data = flutter::testing::OpenFixtureAsSkData("prophoto.jpg");
+  auto image = SkImages::DeferredFromEncodedData(data);
+  std::shared_ptr<impeller::Capabilities> capabilities =
+      impeller::CapabilitiesBuilder()
+          .SetSupportsTextureToTextureBlits(true)
+          .Build();
+  ASSERT_TRUE(image != nullptr);
+  ASSERT_EQ(SkISize::Make(100, 100), image->dimensions());
+
+  ImageGeneratorRegistry registry;
+  std::shared_ptr<ImageGenerator> generator =
+      registry.CreateCompatibleGenerator(data);
+  ASSERT_TRUE(generator);
+
+  auto descriptor = fml::MakeRefCounted<ImageDescriptor>(std::move(data),
+                                                         std::move(generator));
+
+#if IMPELLER_SUPPORTS_RENDERING
+  std::shared_ptr<impeller::Allocator> allocator =
+      std::make_shared<impeller::TestImpellerAllocator>();
+  std::optional<DecompressResult> wide_result =
+      ImageDecoderImpeller::DecompressTexture(
+          descriptor.get(), SkISize::Make(100, 100), {100, 100},
+          /*supports_wide_gamut=*/true, capabilities, allocator);
+  ASSERT_EQ(wide_result->image_info.colorType(), kBGR_101010x_XR_SkColorType);
+  ASSERT_TRUE(wide_result->image_info.colorSpace()->isSRGB());
+
+  std::optional<DecompressResult> narrow_result =
+      ImageDecoderImpeller::DecompressTexture(
+          descriptor.get(), SkISize::Make(100, 100), {100, 100},
+          /*supports_wide_gamut=*/false, capabilities, allocator);
+
+  ASSERT_TRUE(narrow_result.has_value());
+  ASSERT_EQ(narrow_result->image_info.colorType(), kRGBA_8888_SkColorType);
+#endif  // IMPELLER_SUPPORTS_RENDERING
+}
+
 TEST(ImageDecoderNoGLTest, ImpellerUnmultipliedAlphaPng) {
 #if defined(OS_FUCHSIA)
   GTEST_SKIP() << "Fuchsia can't load the test fixtures.";
