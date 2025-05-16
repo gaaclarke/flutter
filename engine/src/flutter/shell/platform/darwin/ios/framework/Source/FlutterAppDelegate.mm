@@ -44,10 +44,13 @@ static NSString* const kRestorationStateAppModificationKey = @"mod-date";
 
 @end
 
-@interface FlutterAppDelegate ()
+@interface FlutterAppDelegate () {
+  BOOL _didLoadStoryboardAtLaunch;
+}
 @property(nonatomic, copy) FlutterViewController* (^rootFlutterViewControllerGetter)(void);
 @property(nonatomic, strong) FlutterPluginAppLifeCycleDelegate* lifeCycleDelegate;
 @property(nonatomic, strong) FlutterLaunchEngine* launchEngine;
+@property(nonatomic, assign) BOOL didFinishLaunching;
 @end
 
 @implementation FlutterAppDelegate
@@ -58,6 +61,22 @@ static NSString* const kRestorationStateAppModificationKey = @"mod-date";
     _launchEngine = [[FlutterLaunchEngine alloc] init];
   }
   return self;
+}
+
+- (UIWindow*)window {
+  if (!_didFinishLaunching && !_window) {
+    NSString* mainStoryboard =
+        [[NSBundle mainBundle] objectForInfoDictionaryKey:@"UIMainStoryboardFile"];
+    UIStoryboard* storyboard = [UIStoryboard storyboardWithName:mainStoryboard
+                                                         bundle:[NSBundle mainBundle]];
+
+    if (storyboard) {
+      _window = [[UIWindow alloc] init];
+      _window.rootViewController = [storyboard instantiateInitialViewController];
+      _didLoadStoryboardAtLaunch = YES;
+    }
+  }
+  return _window;
 }
 
 - (nullable FlutterEngine*)takeLaunchEngine {
@@ -374,6 +393,7 @@ static NSString* const kRestorationStateAppModificationKey = @"mod-date";
 - (UISceneConfiguration*)application:(UIApplication*)application
     configurationForConnectingSceneSession:(UISceneSession*)connectingSceneSession
                                    options:(UISceneConnectionOptions*)options {
+  _didFinishLaunching = YES;
   NSDictionary* sceneManifest =
       [[NSBundle mainBundle] objectForInfoDictionaryKey:@"UIApplicationSceneManifest"];
   NSDictionary* sceneConfigs = sceneManifest[@"UISceneConfigurations"];
@@ -389,7 +409,7 @@ static NSString* const kRestorationStateAppModificationKey = @"mod-date";
     NSString* mainStoryboard =
         [[NSBundle mainBundle] objectForInfoDictionaryKey:@"UIMainStoryboardFile"];
 
-    if (mainStoryboard) {
+    if (!_didLoadStoryboardAtLaunch && mainStoryboard) {
       UIStoryboard* storyboard = [UIStoryboard storyboardWithName:mainStoryboard
                                                            bundle:[NSBundle mainBundle]];
       config.storyboard = storyboard;
