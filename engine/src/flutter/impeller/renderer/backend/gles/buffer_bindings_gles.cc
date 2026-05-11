@@ -474,7 +474,7 @@ std::optional<size_t> BufferBindingsGLES::BindTextures(
     //--------------------------------------------------------------------------
     /// Bind the texture.
     ///
-    if (!texture_gles.Bind()) {
+    if (!const_cast<TextureGLES&>(texture_gles).Bind()) {
       return std::nullopt;
     }
 
