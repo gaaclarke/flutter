@@ -17,6 +17,8 @@ import '../../base/logger.dart';
 import '../../build_info.dart';
 import '../../convert.dart';
 import '../../devfs.dart';
+import '../../globals.dart' as globals;
+import '../../version.dart';
 import '../build_system.dart';
 
 /// A wrapper around [ShaderCompiler] to support hot reload of shader sources.
@@ -94,15 +96,18 @@ class ShaderCompiler {
     required Logger logger,
     required FileSystem fileSystem,
     required Artifacts artifacts,
+    FlutterVersion? flutterVersion,
   }) : _processManager = processManager,
        _logger = logger,
        _fs = fileSystem,
-       _artifacts = artifacts;
+       _artifacts = artifacts,
+       _flutterVersion = flutterVersion;
 
   final ProcessManager _processManager;
   final Logger _logger;
   final FileSystem _fs;
   final Artifacts _artifacts;
+  final FlutterVersion? _flutterVersion;
 
   List<String> _shaderTargetsFromTargetPlatform(TargetPlatform targetPlatform) {
     switch (targetPlatform) {
@@ -172,6 +177,28 @@ class ShaderCompiler {
       );
     }
 
+    var versionStr = '0.0.0-unknown';
+    if (_flutterVersion != null) {
+      versionStr = _flutterVersion.frameworkVersion;
+    } else {
+      try {
+        versionStr = globals.flutterVersion.frameworkVersion;
+      } on Object catch (_) {
+        // Fallback for tests running without context.
+      }
+    }
+
+    final versionRegex = RegExp(r'^(\d+)\.(\d+)\.(\d+)');
+    final RegExpMatch? versionMatch = versionRegex.firstMatch(versionStr);
+    var major = 0;
+    var minor = 0;
+    var patch = 0;
+    if (versionMatch != null) {
+      major = int.parse(versionMatch.group(1)!);
+      minor = int.parse(versionMatch.group(2)!);
+      patch = int.parse(versionMatch.group(3)!);
+    }
+
     final String shaderLibPath = _fs.path.join(impellerc.parent.absolute.path, 'shader_lib');
     List<String> makeImpellercCommand(List<String> targets) => <String>[
       impellerc.path,
@@ -184,6 +211,9 @@ class ShaderCompiler {
       '--input-type=frag',
       '--include=${input.parent.path}',
       '--include=$shaderLibPath',
+      '--define=FLUTTER_VERSION_MAJOR=$major',
+      '--define=FLUTTER_VERSION_MINOR=$minor',
+      '--define=FLUTTER_VERSION_PATCH=$patch',
     ];
 
     var failure = false;
