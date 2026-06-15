@@ -69,6 +69,11 @@ class MockWindowsProcTable : public WindowsProcTable {
 
   MOCK_METHOD(UINT, GetDpiForMonitor, (HMONITOR, UINT), ());
 
+  MOCK_METHOD(int,
+              MessageBox,
+              (HWND hwnd, LPCWSTR text, LPCWSTR caption, UINT type),
+              (const, override));
+
  private:
   FML_DISALLOW_COPY_AND_ASSIGN(MockWindowsProcTable);
 };

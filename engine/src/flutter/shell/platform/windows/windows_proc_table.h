@@ -141,6 +141,15 @@ class WindowsProcTable {
   // https://learn.microsoft.com/windows/win32/api/winuser/nf-winuser-getsystemmetrics
   virtual int GetSystemMetrics(int nIndex) const;
 
+  // Displays a modal dialog box.
+  //
+  // See:
+  // https://learn.microsoft.com/windows/win32/api/winuser/nf-winuser-messageboxw
+  virtual int MessageBox(HWND hwnd,
+                         LPCWSTR text,
+                         LPCWSTR caption,
+                         UINT type) const;
+
   // Enumerate display devices.
   //
   // See:

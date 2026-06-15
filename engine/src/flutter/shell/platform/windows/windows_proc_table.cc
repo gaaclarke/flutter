@@ -147,6 +147,13 @@ int WindowsProcTable::GetSystemMetrics(int nIndex) const {
   return ::GetSystemMetrics(nIndex);
 }
 
+int WindowsProcTable::MessageBox(HWND hwnd,
+                                 LPCWSTR text,
+                                 LPCWSTR caption,
+                                 UINT type) const {
+  return ::MessageBoxW(hwnd, text, caption, type);
+}
+
 BOOL WindowsProcTable::EnumDisplayDevices(LPCWSTR lpDevice,
                                           DWORD iDevNum,
                                           PDISPLAY_DEVICE lpDisplayDevice,

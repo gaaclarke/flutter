@@ -377,8 +377,15 @@ TEST_F(FlutterWindowsEngineTest, RunWithoutANGLEUsesSoftware) {
 TEST_F(FlutterWindowsEngineTest, RunWithoutANGLEOnImpellerFailsToStart) {
   FlutterWindowsEngineBuilder builder{GetContext()};
   builder.SetSwitches({"--enable-impeller=true"});
+  auto windows_proc_table = std::make_shared<MockWindowsProcTable>();
+  builder.SetWindowsProcTable(windows_proc_table);
   std::unique_ptr<FlutterWindowsEngine> engine = builder.Build();
   EngineModifier modifier(engine.get());
+
+  EXPECT_CALL(
+      *windows_proc_table,
+      MessageBox(nullptr, ::testing::_, ::testing::_, MB_OK | MB_ICONERROR))
+      .Times(1);
 
   modifier.embedder_api().NotifyDisplayUpdate =
       MOCK_ENGINE_PROC(NotifyDisplayUpdate,

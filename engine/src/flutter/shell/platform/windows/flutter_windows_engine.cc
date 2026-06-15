@@ -490,6 +490,19 @@ bool FlutterWindowsEngine::Run(std::string_view entrypoint) {
     if (!egl_manager_) {
       FML_LOG(ERROR) << "Could not create surface manager. Impeller backend "
                         "does not support software rendering.";
+      HWND hwnd = nullptr;
+      {
+        std::shared_lock<std::shared_mutex> lock(views_mutex_);
+        if (!views_.empty()) {
+          hwnd = views_.begin()->second->GetWindowHandle();
+        }
+      }
+      windows_proc_table_->MessageBox(
+          hwnd,
+          L"Could not initialize the graphics backend. Impeller requires a "
+          L"compatible GPU and up-to-date graphics drivers. The application "
+          L"will now exit.",
+          L"Flutter Graphic Initialization Failed", MB_OK | MB_ICONERROR);
       return false;
     }
     renderer_config = GetOpenGLRendererConfig();
