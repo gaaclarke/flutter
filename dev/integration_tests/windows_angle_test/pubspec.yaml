@@ -1,0 +1,25 @@
+name: windows_angle_test
+description: Integration test to capture rendering snapshots and upload to Skia Gold on Windows using ANGLE.
+
+environment:
+  sdk: ^3.11.0-0
+
+resolution: workspace
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_driver:
+    sdk: flutter
+  flutter_goldens:
+    path: ../../../packages/flutter_goldens
+  integration_test:
+    sdk: flutter
+  path: any
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  test: any
+
+# PUBSPEC CHECKSUM: w1nd0w54ng13
