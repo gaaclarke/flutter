@@ -20,6 +20,7 @@
 #include "impeller/renderer/backend/gles/pipeline_gles.h"
 #include "impeller/renderer/backend/gles/texture_gles.h"
 #include "impeller/renderer/command.h"
+#include "third_party/abseil-cpp/absl/container/flat_hash_set.h"
 
 namespace impeller {
 
@@ -169,8 +170,7 @@ static bool BindVertexBuffer(const ProcTableGLES& gl,
   }
 
   const auto& vertex_buffer_gles = DeviceBufferGLES::Cast(*vertex_buffer);
-  if (!vertex_buffer_gles.BindAndUploadDataIfNecessary(
-          DeviceBufferGLES::BindingType::kArrayBuffer)) {
+  if (!vertex_buffer_gles.Bind(DeviceBufferGLES::BindingType::kArrayBuffer)) {
     return false;
   }
 
@@ -234,6 +234,38 @@ static void EncodeViewport(const ProcTableGLES& gl,
   }
 }
 
+static bool BatchUploadBuffers(
+    const std::vector<Command>& commands,
+    const std::vector<BufferView>& vertex_buffers,
+    const std::vector<BufferResource>& bound_buffers) {
+  absl::flat_hash_set<const DeviceBuffer*> unique_buffers;
+  for (const auto& vb : vertex_buffers) {
+    if (const auto* buf = vb.GetBuffer()) {
+      unique_buffers.insert(buf);
+    }
+  }
+  for (const auto& bb : bound_buffers) {
+    if (const auto* buf = bb.resource.GetBuffer()) {
+      unique_buffers.insert(buf);
+    }
+  }
+  for (const auto& command : commands) {
+    if (command.index_buffer) {
+      if (const auto* buf = command.index_buffer.GetBuffer()) {
+        unique_buffers.insert(buf);
+      }
+    }
+  }
+
+  for (const auto* buf : unique_buffers) {
+    const auto& buf_gles = DeviceBufferGLES::Cast(*buf);
+    if (!buf_gles.UploadDataIfNecessary()) {
+      return false;
+    }
+  }
+  return true;
+}
+
 [[nodiscard]] bool EncodeCommandsInReactor(
     const RenderPassData& pass_data,
     const ReactorGLES& reactor,
@@ -244,6 +276,10 @@ static void EncodeViewport(const ProcTableGLES& gl,
     const std::shared_ptr<GPUTracerGLES>& tracer,
     const std::shared_ptr<const Context>& impeller_context) {
   TRACE_EVENT0("impeller", "RenderPassGLES::EncodeCommandsInReactor");
+
+  if (!BatchUploadBuffers(commands, vertex_buffers, bound_buffers)) {
+    return false;
+  }
 
   const auto& gl = reactor.GetProcTable();
 #ifdef IMPELLER_DEBUG
@@ -567,7 +603,7 @@ static void EncodeViewport(const ProcTableGLES& gl,
       auto index_buffer_view = command.index_buffer;
       const DeviceBuffer* index_buffer = index_buffer_view.GetBuffer();
       const auto& index_buffer_gles = DeviceBufferGLES::Cast(*index_buffer);
-      if (!index_buffer_gles.BindAndUploadDataIfNecessary(
+      if (!index_buffer_gles.Bind(
               DeviceBufferGLES::BindingType::kElementArrayBuffer)) {
         return false;
       }

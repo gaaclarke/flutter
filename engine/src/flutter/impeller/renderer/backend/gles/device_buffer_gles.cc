@@ -88,7 +88,53 @@ static GLenum ToTarget(DeviceBufferGLES::BindingType type) {
   FML_UNREACHABLE();
 }
 
-bool DeviceBufferGLES::BindAndUploadDataIfNecessary(BindingType type) const {
+bool DeviceBufferGLES::UploadDataIfNecessary() const {
+  if (!reactor_) {
+    return false;
+  }
+
+  if (!handle_.has_value()) {
+    handle_ = reactor_->CreateUntrackedHandle(HandleType::kBuffer);
+#ifdef IMPELLER_DEBUG
+    if (handle_.has_value() && label_.has_value()) {
+      reactor_->SetDebugLabel(*handle_, *label_);
+    }
+#endif
+  }
+
+  auto buffer = reactor_->GetGLHandle(*handle_);
+  if (!buffer.has_value()) {
+    return false;
+  }
+
+  // Take and clear the dirty range BEFORE uploading. A Flush() from another
+  // thread during the upload then merges into a fresh dirty range that the
+  // next bind uploads, instead of being silently discarded by a clear that
+  // runs after the upload.
+  std::optional<Range> dirty;
+  {
+    Lock lock(dirty_range_mutex_);
+    std::swap(dirty_range_, dirty);
+  }
+
+  if (!initialized_ || dirty.has_value()) {
+    const auto& gl = reactor_->GetProcTable();
+    gl.BindBuffer(GL_ARRAY_BUFFER, buffer.value());
+    if (!initialized_) {
+      gl.BufferData(GL_ARRAY_BUFFER, backing_store_->GetLength().GetByteSize(),
+                    nullptr, GL_DYNAMIC_DRAW);
+      initialized_ = true;
+    }
+    if (dirty.has_value()) {
+      gl.BufferSubData(GL_ARRAY_BUFFER, dirty->offset, dirty->length,
+                       backing_store_->GetBuffer() + dirty->offset);
+    }
+  }
+
+  return true;
+}
+
+bool DeviceBufferGLES::Bind(BindingType type) const {
   if (!reactor_) {
     return false;
   }
@@ -109,29 +155,15 @@ bool DeviceBufferGLES::BindAndUploadDataIfNecessary(BindingType type) const {
 
   const auto target_type = ToTarget(type);
   const auto& gl = reactor_->GetProcTable();
-
   gl.BindBuffer(target_type, buffer.value());
-  if (!initialized_) {
-    gl.BufferData(target_type, backing_store_->GetLength().GetByteSize(),
-                  nullptr, GL_DYNAMIC_DRAW);
-    initialized_ = true;
-  }
-
-  // Take and clear the dirty range BEFORE uploading. A Flush() from another
-  // thread during the upload then merges into a fresh dirty range that the
-  // next bind uploads, instead of being silently discarded by a clear that
-  // runs after the upload.
-  std::optional<Range> dirty;
-  {
-    Lock lock(dirty_range_mutex_);
-    std::swap(dirty_range_, dirty);
-  }
-  if (dirty.has_value()) {
-    gl.BufferSubData(target_type, dirty->offset, dirty->length,
-                     backing_store_->GetBuffer() + dirty->offset);
-  }
-
   return true;
+}
+
+bool DeviceBufferGLES::BindAndUploadDataIfNecessary(BindingType type) const {
+  if (!UploadDataIfNecessary()) {
+    return false;
+  }
+  return Bind(type);
 }
 
 // |DeviceBuffer|

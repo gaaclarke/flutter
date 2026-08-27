@@ -382,8 +382,7 @@ bool BufferBindingsGLES::BindUniformBufferV3(
     return BindUniformBufferV2(gl, buffer, metadata, device_buffer_gles);
   }
   const auto& ubo_info = it->second;
-  if (!device_buffer_gles.BindAndUploadDataIfNecessary(
-          DeviceBufferGLES::BindingType::kUniformBuffer)) {
+  if (!device_buffer_gles.UploadDataIfNecessary()) {
     return false;
   }
   auto handle = device_buffer_gles.GetHandle();

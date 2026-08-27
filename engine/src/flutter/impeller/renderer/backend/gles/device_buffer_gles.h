@@ -38,6 +38,10 @@ class DeviceBufferGLES final
     kUniformBuffer,
   };
 
+  [[nodiscard]] bool UploadDataIfNecessary() const;
+
+  [[nodiscard]] bool Bind(BindingType type) const;
+
   [[nodiscard]] bool BindAndUploadDataIfNecessary(BindingType type) const;
 
   void Flush(std::optional<Range> range = std::nullopt) const override;

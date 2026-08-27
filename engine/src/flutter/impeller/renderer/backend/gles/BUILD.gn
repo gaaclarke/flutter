@@ -115,5 +115,6 @@ impeller_component("gles") {
     "../../../shader_archive",
     "//flutter/fml",
     "//third_party/abseil-cpp/absl/container:flat_hash_map",
+    "//third_party/abseil-cpp/absl/container:flat_hash_set",
   ]
 }
