@@ -371,7 +371,7 @@ bool TextContents::Render(const ContentContext& renderer,
                           /*glyph_properties=*/properties_,
                           /*atlas=*/atlas);
       });
-  BufferView index_buffer_view = indexes_host_buffer.Emplace(
+  BufferView index_buffer_view = indexes_host_buffer.EmplaceIndex(
       index_count * sizeof(uint16_t), alignof(uint16_t), [&](uint8_t* data) {
         uint16_t* indices = reinterpret_cast<uint16_t*>(data);
         size_t j = 0;

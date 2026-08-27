@@ -126,7 +126,7 @@ GeometryResult DlVerticesGeometry::GetPositionBuffer(
   const uint16_t* indices_data =
       performed_normalization_ ? indices_.data() : vertices_->indices();
   if (index_count) {
-    index_buffer = renderer.GetTransientsIndexesBuffer().Emplace(
+    index_buffer = renderer.GetTransientsIndexesBuffer().EmplaceIndex(
         indices_data, index_count * sizeof(uint16_t), alignof(uint16_t));
   }
 
@@ -187,7 +187,7 @@ GeometryResult DlVerticesGeometry::GetPositionUVColorBuffer(
   const uint16_t* indices_data =
       performed_normalization_ ? indices_.data() : vertices_->indices();
   if (index_count) {
-    index_buffer = renderer.GetTransientsIndexesBuffer().Emplace(
+    index_buffer = renderer.GetTransientsIndexesBuffer().EmplaceIndex(
         indices_data, index_count * sizeof(uint16_t), alignof(uint16_t));
   }
 

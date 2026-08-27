@@ -1453,7 +1453,7 @@ GeometryResult ShadowVertices::GetPositionBuffer(const ContentContext& renderer,
   size_t index_count = GetIndexCount();
   const uint16_t* indices_data = GetIndices().data();
   BufferView index_buffer = {};
-  index_buffer = renderer.GetTransientsIndexesBuffer().Emplace(
+  index_buffer = renderer.GetTransientsIndexesBuffer().EmplaceIndex(
       indices_data, index_count * sizeof(uint16_t), alignof(uint16_t));
 
   return GeometryResult{

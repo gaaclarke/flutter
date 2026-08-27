@@ -37,13 +37,20 @@ HostBuffer::HostBuffer(
       idle_waiter_(idle_waiter),
       submission_tracker_(std::move(submission_tracker)),
       minimum_uniform_alignment_(minimum_uniform_alignment) {
+  InitializeArena(vertex_arena_);
+  InitializeArena(uniform_arena_);
+  InitializeArena(index_arena_);
+}
+
+void HostBuffer::InitializeArena(SubArena& arena) {
   DeviceBufferDescriptor desc;
   desc.size = kAllocatorBlockSize;
   desc.storage_mode = StorageMode::kHostVisible;
   for (auto i = 0u; i < kHostBufferArenaSize; i++) {
-    std::shared_ptr<DeviceBuffer> device_buffer = allocator->CreateBuffer(desc);
+    std::shared_ptr<DeviceBuffer> device_buffer =
+        allocator_->CreateBuffer(desc);
     FML_CHECK(device_buffer) << "Failed to allocate device buffer.";
-    device_buffers_[i].push_back(device_buffer);
+    arena.device_buffers[i].push_back(device_buffer);
   }
 }
 
@@ -59,19 +66,7 @@ BufferView HostBuffer::Emplace(const void* buffer,
                                size_t length,
                                size_t align) {
   auto [range, device_buffer, raw_device_buffer] =
-      EmplaceInternal(buffer, length, align);
-  if (device_buffer) {
-    return BufferView(std::move(device_buffer), range);
-  } else if (raw_device_buffer) {
-    return BufferView(raw_device_buffer, range);
-  } else {
-    return {};
-  }
-}
-
-BufferView HostBuffer::Emplace(const void* buffer, size_t length) {
-  auto [range, device_buffer, raw_device_buffer] =
-      EmplaceInternal(buffer, length);
+      EmplaceInternal(vertex_arena_, buffer, length, align);
   if (device_buffer) {
     return BufferView(std::move(device_buffer), range);
   } else if (raw_device_buffer) {
@@ -85,7 +80,49 @@ BufferView HostBuffer::Emplace(size_t length,
                                size_t align,
                                const EmplaceProc& cb) {
   auto [range, device_buffer, raw_device_buffer] =
-      EmplaceInternal(length, align, cb);
+      EmplaceInternal(vertex_arena_, length, align, cb);
+  if (device_buffer) {
+    return BufferView(std::move(device_buffer), range);
+  } else if (raw_device_buffer) {
+    return BufferView(raw_device_buffer, range);
+  } else {
+    return {};
+  }
+}
+
+BufferView HostBuffer::EmplaceUniform(const void* buffer,
+                                      size_t length,
+                                      size_t align) {
+  auto [range, device_buffer, raw_device_buffer] =
+      EmplaceInternal(uniform_arena_, buffer, length, align);
+  if (device_buffer) {
+    return BufferView(std::move(device_buffer), range);
+  } else if (raw_device_buffer) {
+    return BufferView(raw_device_buffer, range);
+  } else {
+    return {};
+  }
+}
+
+BufferView HostBuffer::EmplaceIndex(const void* buffer,
+                                    size_t length,
+                                    size_t align) {
+  auto [range, device_buffer, raw_device_buffer] =
+      EmplaceInternal(index_arena_, buffer, length, align);
+  if (device_buffer) {
+    return BufferView(std::move(device_buffer), range);
+  } else if (raw_device_buffer) {
+    return BufferView(raw_device_buffer, range);
+  } else {
+    return {};
+  }
+}
+
+BufferView HostBuffer::EmplaceIndex(size_t length,
+                                    size_t align,
+                                    const EmplaceProc& cb) {
+  auto [range, device_buffer, raw_device_buffer] =
+      EmplaceInternal(index_arena_, length, align, cb);
   if (device_buffer) {
     return BufferView(std::move(device_buffer), range);
   } else if (raw_device_buffer) {
@@ -98,14 +135,14 @@ BufferView HostBuffer::Emplace(size_t length,
 HostBuffer::TestStateQuery HostBuffer::GetStateForTest() {
   return HostBuffer::TestStateQuery{
       .current_frame = frame_index_,
-      .current_buffer = current_buffer_,
-      .total_buffer_count = device_buffers_[frame_index_].size(),
+      .current_buffer = vertex_arena_.current_buffer,
+      .total_buffer_count = vertex_arena_.device_buffers[frame_index_].size(),
   };
 }
 
-bool HostBuffer::MaybeCreateNewBuffer() {
-  current_buffer_++;
-  if (current_buffer_ >= device_buffers_[frame_index_].size()) {
+bool HostBuffer::MaybeCreateNewBuffer(SubArena& arena) {
+  arena.current_buffer++;
+  if (arena.current_buffer >= arena.device_buffers[frame_index_].size()) {
     DeviceBufferDescriptor desc;
     desc.size = kAllocatorBlockSize;
     desc.storage_mode = StorageMode::kHostVisible;
@@ -114,14 +151,15 @@ bool HostBuffer::MaybeCreateNewBuffer() {
       VALIDATION_LOG << "Failed to allocate host buffer of size " << desc.size;
       return false;
     }
-    device_buffers_[frame_index_].push_back(std::move(buffer));
+    arena.device_buffers[frame_index_].push_back(std::move(buffer));
   }
-  offset_ = 0;
+  arena.offset = 0;
   return true;
 }
 
 std::tuple<Range, std::shared_ptr<DeviceBuffer>, DeviceBuffer*>
-HostBuffer::EmplaceInternal(size_t length,
+HostBuffer::EmplaceInternal(SubArena& arena,
+                            size_t length,
                             size_t align,
                             const EmplaceProc& cb) {
   if (!cb) {
@@ -147,29 +185,32 @@ HostBuffer::EmplaceInternal(size_t length,
   }
 
   size_t padding = 0;
-  if (align > 0 && offset_ % align) {
-    padding = align - (offset_ % align);
+  if (align > 0 && arena.offset % align) {
+    padding = align - (arena.offset % align);
   }
-  if (offset_ + padding + length > kAllocatorBlockSize) {
-    if (!MaybeCreateNewBuffer()) {
+  if (arena.offset + padding + length > kAllocatorBlockSize) {
+    if (!MaybeCreateNewBuffer(arena)) {
       return {};
     }
   } else {
-    offset_ += padding;
+    arena.offset += padding;
   }
 
-  const std::shared_ptr<DeviceBuffer>& current_buffer = GetCurrentBuffer();
+  const std::shared_ptr<DeviceBuffer>& current_buffer = GetCurrentBuffer(arena);
   auto contents = current_buffer->OnGetContents();
-  cb(contents + offset_);
-  Range output_range(offset_, length);
+  cb(contents + arena.offset);
+  Range output_range(arena.offset, length);
   current_buffer->Flush(output_range);
 
-  offset_ += length;
+  arena.offset += length;
   return std::make_tuple(output_range, nullptr, current_buffer.get());
 }
 
 std::tuple<Range, std::shared_ptr<DeviceBuffer>, DeviceBuffer*>
-HostBuffer::EmplaceInternal(const void* buffer, size_t length) {
+HostBuffer::EmplaceInternal(SubArena& arena,
+                            const void* buffer,
+                            size_t length,
+                            size_t align) {
   // If the requested allocation is bigger than the block size, create a one-off
   // device buffer and write to that.
   if (length > kAllocatorBlockSize) {
@@ -190,62 +231,48 @@ HostBuffer::EmplaceInternal(const void* buffer, size_t length) {
     return std::make_tuple(Range{0, length}, std::move(device_buffer), nullptr);
   }
 
-  auto old_length = GetLength();
-  if (old_length + length > kAllocatorBlockSize) {
-    if (!MaybeCreateNewBuffer()) {
+  size_t padding = 0;
+  if (align > 0 && arena.offset % align) {
+    padding = align - (arena.offset % align);
+  }
+  if (arena.offset + padding + length > kAllocatorBlockSize) {
+    if (!MaybeCreateNewBuffer(arena)) {
       return {};
     }
+  } else {
+    arena.offset += padding;
   }
-  old_length = GetLength();
 
-  const std::shared_ptr<DeviceBuffer>& current_buffer = GetCurrentBuffer();
+  const std::shared_ptr<DeviceBuffer>& current_buffer = GetCurrentBuffer(arena);
   auto contents = current_buffer->OnGetContents();
   if (buffer) {
-    ::memmove(contents + old_length, buffer, length);
-    current_buffer->Flush(Range{old_length, length});
+    ::memmove(contents + arena.offset, buffer, length);
+    current_buffer->Flush(Range{arena.offset, length});
   }
-  offset_ += length;
-  return std::make_tuple(Range{old_length, length}, nullptr,
-                         current_buffer.get());
+  Range output_range(arena.offset, length);
+  arena.offset += length;
+  return std::make_tuple(output_range, nullptr, current_buffer.get());
 }
 
-std::tuple<Range, std::shared_ptr<DeviceBuffer>, DeviceBuffer*>
-HostBuffer::EmplaceInternal(const void* buffer, size_t length, size_t align) {
-  if (align == 0 || (GetLength() % align) == 0) {
-    return EmplaceInternal(buffer, length);
-  }
-
-  {
-    auto padding = align - (GetLength() % align);
-    if (offset_ + padding < kAllocatorBlockSize) {
-      offset_ += padding;
-    } else if (!MaybeCreateNewBuffer()) {
-      return {};
-    }
-  }
-
-  return EmplaceInternal(buffer, length);
+const std::shared_ptr<DeviceBuffer>& HostBuffer::GetCurrentBuffer(
+    const SubArena& arena) const {
+  return arena.device_buffers[frame_index_][arena.current_buffer];
 }
 
-const std::shared_ptr<DeviceBuffer>& HostBuffer::GetCurrentBuffer() const {
-  return device_buffers_[frame_index_][current_buffer_];
-}
-
-void HostBuffer::Reset() {
+void HostBuffer::ResetArena(SubArena& arena) {
   // When resetting the host buffer state at the end of the frame, check if
   // there are any unused buffers and remove them.
-  while (device_buffers_[frame_index_].size() > current_buffer_ + 1) {
-    device_buffers_[frame_index_].pop_back();
+  while (arena.device_buffers[frame_index_].size() > arena.current_buffer + 1) {
+    arena.device_buffers[frame_index_].pop_back();
   }
 
   if (submission_tracker_) {
     // Everything submitted so far may reference this entry's buffers.
-    entry_stamps_[frame_index_] = submission_tracker_->LatestSubmission();
+    arena.entry_stamps[frame_index_] = submission_tracker_->LatestSubmission();
   }
 
-  offset_ = 0u;
-  current_buffer_ = 0u;
-  frame_index_ = (frame_index_ + 1) % kHostBufferArenaSize;
+  arena.offset = 0u;
+  arena.current_buffer = 0u;
 
   if (!submission_tracker_) {
     return;
@@ -253,11 +280,11 @@ void HostBuffer::Reset() {
   uint64_t completed = submission_tracker_->CompletedThrough();
 
   // Release retired buffers the GPU has completed with.
-  std::erase_if(retired_buffers_, [completed](const auto& retired) {
+  std::erase_if(arena.retired_buffers, [completed](const auto& retired) {
     return retired.first <= completed;
   });
 
-  if (entry_stamps_[frame_index_] <= completed) {
+  if (arena.entry_stamps[frame_index_] <= completed) {
     return;
   }
 
@@ -272,11 +299,19 @@ void HostBuffer::Reset() {
     VALIDATION_LOG << "Failed to replace an in-flight host buffer entry.";
     return;
   }
-  retired_buffers_.emplace_back(entry_stamps_[frame_index_],
-                                std::move(device_buffers_[frame_index_]));
-  device_buffers_[frame_index_].clear();
-  device_buffers_[frame_index_].push_back(std::move(buffer));
-  entry_stamps_[frame_index_] = 0;
+  arena.retired_buffers.emplace_back(
+      arena.entry_stamps[frame_index_],
+      std::move(arena.device_buffers[frame_index_]));
+  arena.device_buffers[frame_index_].clear();
+  arena.device_buffers[frame_index_].push_back(std::move(buffer));
+  arena.entry_stamps[frame_index_] = 0;
+}
+
+void HostBuffer::Reset() {
+  ResetArena(vertex_arena_);
+  ResetArena(uniform_arena_);
+  ResetArena(index_arena_);
+  frame_index_ = (frame_index_ + 1) % kHostBufferArenaSize;
 }
 
 size_t HostBuffer::GetMinimumUniformAlignment() const {

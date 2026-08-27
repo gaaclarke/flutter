@@ -52,22 +52,36 @@ class HostBuffer {
   ///
   /// @return     The buffer view.
   ///
+  //----------------------------------------------------------------------------
+  /// @brief      Emplace uniform data onto the host buffer. Ensure that backend
+  ///             specific uniform alignment requirements are respected.
+  ///
+  /// @param[in]  uniform     The uniform struct to emplace onto the buffer.
+  ///
+  /// @tparam     UniformType The type of the uniform struct.
+  ///
+  /// @return     The buffer view.
+  ///
   template <class UniformType,
             class = std::enable_if_t<std::is_standard_layout_v<UniformType>>>
   [[nodiscard]] BufferView EmplaceUniform(const UniformType& uniform) {
     const auto alignment =
         std::max(alignof(UniformType), GetMinimumUniformAlignment());
-    return Emplace(reinterpret_cast<const void*>(&uniform),  // buffer
-                   sizeof(UniformType),                      // size
-                   alignment                                 // alignment
+    return EmplaceUniform(reinterpret_cast<const void*>(&uniform),  // buffer
+                          sizeof(UniformType),                      // size
+                          alignment                                 // alignment
     );
   }
+
+  [[nodiscard]] BufferView EmplaceUniform(const void* buffer,
+                                          size_t length,
+                                          size_t align);
 
   //----------------------------------------------------------------------------
   /// @brief      Emplace storage buffer data onto the host buffer. Ensure that
   ///             backend specific uniform alignment requirements are respected.
   ///
-  /// @param[in]  uniform     The storage buffer to emplace onto the buffer.
+  /// @param[in]  buffer      The storage buffer to emplace onto the buffer.
   ///
   /// @tparam     StorageBufferType The type of the shader storage buffer.
   ///
@@ -80,9 +94,9 @@ class HostBuffer {
       const StorageBufferType& buffer) {
     const auto alignment =
         std::max(alignof(StorageBufferType), GetMinimumUniformAlignment());
-    return Emplace(&buffer,                    // buffer
-                   sizeof(StorageBufferType),  // size
-                   alignment                   // alignment
+    return EmplaceUniform(&buffer,                    // buffer
+                          sizeof(StorageBufferType),  // size
+                          alignment                   // alignment
     );
   }
 
@@ -115,10 +129,7 @@ class HostBuffer {
 
   //----------------------------------------------------------------------------
   /// @brief      Emplaces undefined data onto the managed buffer and gives the
-  ///             caller a chance to update it using the specified callback. The
-  ///             buffer is guaranteed to have enough space for length bytes. It
-  ///             is the responsibility of the caller to not exceed the bounds
-  ///             of the buffer returned in the EmplaceProc.
+  ///             caller a chance to update it using the specified callback.
   ///
   /// @param[in]  cb            A callback that will be passed a ptr to the
   ///                           underlying host buffer.
@@ -126,6 +137,32 @@ class HostBuffer {
   /// @return     The buffer view.
   ///
   BufferView Emplace(size_t length, size_t align, const EmplaceProc& cb);
+
+  //----------------------------------------------------------------------------
+  /// @brief      Emplace index data onto the host buffer.
+  ///
+  /// @param[in]  buffer        The index buffer data.
+  /// @param[in]  length        The length in bytes.
+  /// @param[in]  align         Minimum alignment.
+  ///
+  /// @return     The buffer view.
+  ///
+  [[nodiscard]] BufferView EmplaceIndex(const void* buffer,
+                                        size_t length,
+                                        size_t align);
+
+  [[nodiscard]] BufferView EmplaceIndex(size_t length,
+                                        size_t align,
+                                        const EmplaceProc& cb);
+
+  template <class IndexType,
+            class = std::enable_if_t<std::is_standard_layout_v<IndexType>>>
+  [[nodiscard]] BufferView EmplaceIndex(const IndexType& buffer,
+                                        size_t alignment = 0) {
+    return EmplaceIndex(reinterpret_cast<const void*>(&buffer),
+                        sizeof(IndexType),
+                        std::max(alignment, alignof(IndexType)));
+  }
 
   /// Retrieve the minimum uniform buffer alignment in bytes.
   size_t GetMinimumUniformAlignment() const;
@@ -146,26 +183,35 @@ class HostBuffer {
   TestStateQuery GetStateForTest();
 
  private:
+  struct SubArena {
+    std::array<std::vector<std::shared_ptr<DeviceBuffer>>, kHostBufferArenaSize>
+        device_buffers;
+    std::array<uint64_t, kHostBufferArenaSize> entry_stamps = {};
+    std::vector<std::pair<uint64_t, std::vector<std::shared_ptr<DeviceBuffer>>>>
+        retired_buffers;
+    size_t current_buffer = 0u;
+    size_t offset = 0u;
+  };
+
+  void InitializeArena(SubArena& arena);
+  void ResetArena(SubArena& arena);
+
   [[nodiscard]] std::tuple<Range, std::shared_ptr<DeviceBuffer>, DeviceBuffer*>
-  EmplaceInternal(const void* buffer, size_t length);
+  EmplaceInternal(SubArena& arena,
+                  size_t length,
+                  size_t align,
+                  const EmplaceProc& cb);
 
-  std::tuple<Range, std::shared_ptr<DeviceBuffer>, DeviceBuffer*>
-  EmplaceInternal(size_t length, size_t align, const EmplaceProc& cb);
+  [[nodiscard]] std::tuple<Range, std::shared_ptr<DeviceBuffer>, DeviceBuffer*>
+  EmplaceInternal(SubArena& arena,
+                  const void* buffer,
+                  size_t length,
+                  size_t align);
 
-  std::tuple<Range, std::shared_ptr<DeviceBuffer>, DeviceBuffer*>
-  EmplaceInternal(const void* buffer, size_t length, size_t align);
+  [[nodiscard]] bool MaybeCreateNewBuffer(SubArena& arena);
 
-  size_t GetLength() const { return offset_; }
-
-  /// Attempt to create a new internal buffer if the existing capacity is not
-  /// sufficient.
-  ///
-  /// A false return value indicates an unrecoverable allocation failure.
-  [[nodiscard]] bool MaybeCreateNewBuffer();
-
-  const std::shared_ptr<DeviceBuffer>& GetCurrentBuffer() const;
-
-  [[nodiscard]] BufferView Emplace(const void* buffer, size_t length);
+  const std::shared_ptr<DeviceBuffer>& GetCurrentBuffer(
+      const SubArena& arena) const;
 
   explicit HostBuffer(
       const std::shared_ptr<Allocator>& allocator,
@@ -180,17 +226,9 @@ class HostBuffer {
   std::shared_ptr<Allocator> allocator_;
   std::shared_ptr<const IdleWaiter> idle_waiter_;
   std::shared_ptr<const GpuSubmissionTracker> submission_tracker_;
-  std::array<std::vector<std::shared_ptr<DeviceBuffer>>, kHostBufferArenaSize>
-      device_buffers_;
-  // Per-entry id of the last GPU submission that may reference the entry's
-  // buffers.
-  std::array<uint64_t, kHostBufferArenaSize> entry_stamps_ = {};
-  // Buffers pulled out of reuse because the GPU had not completed with them,
-  // keyed by the submission id to outlive.
-  std::vector<std::pair<uint64_t, std::vector<std::shared_ptr<DeviceBuffer>>>>
-      retired_buffers_;
-  size_t current_buffer_ = 0u;
-  size_t offset_ = 0u;
+  SubArena vertex_arena_;
+  SubArena uniform_arena_;
+  SubArena index_arena_;
   size_t frame_index_ = 0u;
   size_t minimum_uniform_alignment_ = 0u;
 };

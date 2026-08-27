@@ -149,9 +149,9 @@ class VertexBufferBuilder {
     if (index_buffer.size() == 0) {
       return {};
     }
-    return indexes_host_buffer.Emplace(index_buffer.data(),
-                                       index_buffer.size() * sizeof(IndexType),
-                                       alignof(IndexType));
+    return indexes_host_buffer.EmplaceIndex(
+        index_buffer.data(), index_buffer.size() * sizeof(IndexType),
+        alignof(IndexType));
   }
 
   BufferView CreateIndexBufferView(Allocator& allocator) const {

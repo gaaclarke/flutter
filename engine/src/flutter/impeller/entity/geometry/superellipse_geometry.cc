@@ -86,7 +86,7 @@ GeometryResult SuperellipseGeometry::GetPositionBuffer(
               .vertex_buffer = data_host_buffer.Emplace(
                   geometry.data(), geometry.size() * sizeof(Point),
                   alignof(Point)),
-              .index_buffer = indexes_host_buffer.Emplace(
+              .index_buffer = indexes_host_buffer.EmplaceIndex(
                   indices.data(), indices.size() * sizeof(uint16_t),
                   alignof(uint16_t)),
               .vertex_count = indices.size(),

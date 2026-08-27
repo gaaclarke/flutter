@@ -340,7 +340,7 @@ class ConvexTessellatorImpl : public Tessellator::ConvexTessellator {
           PathTessellator::CountFillStorage(path, tolerance);
       BufferView point_buffer = data_host_buffer.Emplace(
           nullptr, sizeof(Point) * point_count, alignof(Point));
-      BufferView index_buffer = indexes_host_buffer.Emplace(
+      BufferView index_buffer = indexes_host_buffer.EmplaceIndex(
           nullptr, sizeof(IndexT) * (point_count + contour_count),
           alignof(IndexT));
 
@@ -390,7 +390,7 @@ class ConvexTessellatorImpl : public Tessellator::ConvexTessellator {
         point_buffer_.data(), sizeof(Point) * point_buffer_.size(),
         alignof(Point));
 
-    BufferView index_buffer = indexes_host_buffer.Emplace(
+    BufferView index_buffer = indexes_host_buffer.EmplaceIndex(
         index_buffer_.data(), sizeof(IndexT) * index_buffer_.size(),
         alignof(IndexT));
 
