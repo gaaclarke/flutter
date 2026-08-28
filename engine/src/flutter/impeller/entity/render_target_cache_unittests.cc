@@ -17,9 +17,6 @@
 namespace impeller {
 namespace testing {
 
-using RenderTargetCacheTest = EntityPlayground;
-INSTANTIATE_PLAYGROUND_SUITE(RenderTargetCacheTest);
-
 class TestAllocator : public Allocator {
  public:
   TestAllocator() = default;
@@ -44,13 +41,50 @@ class TestAllocator : public Allocator {
     if (should_fail) {
       return nullptr;
     }
-    return std::make_shared<MockTexture>(desc);
+    auto tex = std::make_shared<MockTexture>(desc);
+    ON_CALL(*tex, IsValid()).WillByDefault(::testing::Return(true));
+    ON_CALL(*tex, GetSize()).WillByDefault(::testing::Return(desc.size));
+    return tex;
   };
 
   bool should_fail = false;
 };
 
-TEST_P(RenderTargetCacheTest, CachesUsedTexturesAcrossFrames) {
+class RenderTargetCacheTest : public ::testing::Test {
+ public:
+  void SetUp() override {
+    allocator_ = std::make_shared<TestAllocator>();
+    context_ = std::make_shared<MockImpellerContext>();
+    auto capabilities = std::make_shared<MockCapabilities>();
+    EXPECT_CALL(*capabilities, GetDefaultColorFormat())
+        .WillRepeatedly(::testing::Return(PixelFormat::kR8G8B8A8UNormInt));
+    EXPECT_CALL(*capabilities, SupportsImplicitResolvingMSAA())
+        .WillRepeatedly(::testing::Return(false));
+    EXPECT_CALL(*capabilities, GetDefaultDepthStencilFormat())
+        .WillRepeatedly(::testing::Return(PixelFormat::kS8UInt));
+    capabilities_ = capabilities;
+
+    EXPECT_CALL(*context_, GetResourceAllocator())
+        .WillRepeatedly(::testing::Return(allocator_));
+    EXPECT_CALL(*context_, GetCapabilities())
+        .WillRepeatedly(::testing::ReturnRef(capabilities_));
+  }
+
+  const std::shared_ptr<MockImpellerContext>& GetContext() const {
+    return context_;
+  }
+
+  const std::shared_ptr<TestAllocator>& GetAllocator() const {
+    return allocator_;
+  }
+
+ private:
+  std::shared_ptr<TestAllocator> allocator_;
+  std::shared_ptr<MockImpellerContext> context_;
+  std::shared_ptr<const Capabilities> capabilities_;
+};
+
+TEST_F(RenderTargetCacheTest, CachesUsedTexturesAcrossFrames) {
   auto render_target_cache = RenderTargetCache(
       GetContext()->GetResourceAllocator(), /*keep_alive_frame_count=*/0);
 
@@ -74,7 +108,7 @@ TEST_P(RenderTargetCacheTest, CachesUsedTexturesAcrossFrames) {
   EXPECT_EQ(render_target_cache.CachedTextureCount(), 1u);
 }
 
-TEST_P(RenderTargetCacheTest, CachesUsedTexturesAcrossFramesWithKeepAlive) {
+TEST_F(RenderTargetCacheTest, CachesUsedTexturesAcrossFramesWithKeepAlive) {
   auto render_target_cache = RenderTargetCache(
       GetContext()->GetResourceAllocator(), /*keep_alive_frame_count=*/3);
 
@@ -104,7 +138,56 @@ TEST_P(RenderTargetCacheTest, CachesUsedTexturesAcrossFramesWithKeepAlive) {
   EXPECT_EQ(render_target_cache.CachedTextureCount(), 0u);
 }
 
-TEST_P(RenderTargetCacheTest, DoesNotPersistFailedAllocations) {
+TEST_F(RenderTargetCacheTest, ReusesTexturesIntraFrame) {
+  auto render_target_cache = RenderTargetCache(
+      GetContext()->GetResourceAllocator(), /*keep_alive_frame_count=*/0);
+
+  render_target_cache.Start();
+  // Pass 1: Allocate target 1.
+  std::shared_ptr<Texture> t1_tex;
+  {
+    RenderTarget target1 =
+        render_target_cache.CreateOffscreen(*GetContext(), {100, 100}, 1);
+    t1_tex = target1.GetColorAttachment(0).texture;
+    EXPECT_EQ(render_target_cache.CachedTextureCount(), 1u);
+  }
+
+  // Pass 2: Allocate target 2 (ping-pong consecutive pass).
+  // Target 1 was used in pass 1 so cannot be reused immediately in pass 2.
+  std::shared_ptr<Texture> t2_tex;
+  {
+    RenderTarget target2 =
+        render_target_cache.CreateOffscreen(*GetContext(), {100, 100}, 1);
+    t2_tex = target2.GetColorAttachment(0).texture;
+    EXPECT_NE(t1_tex, t2_tex);
+    EXPECT_EQ(render_target_cache.CachedTextureCount(), 2u);
+  }
+
+  // Pass 3: Request target 3. Since target 1 was used in pass 1 and target 1's
+  // reference was dropped, target 1 is safe to reuse in pass 3!
+  Texture* raw_t1_tex = t1_tex.get();
+  t1_tex.reset();
+  {
+    RenderTarget target3 =
+        render_target_cache.CreateOffscreen(*GetContext(), {100, 100}, 1);
+    EXPECT_EQ(render_target_cache.CachedTextureCount(), 2u);
+    EXPECT_EQ(target3.GetColorAttachment(0).texture.get(), raw_t1_tex);
+  }
+
+  // Pass 4: Request target 4. Reuses target 2!
+  Texture* raw_t2_tex = t2_tex.get();
+  t2_tex.reset();
+  {
+    RenderTarget target4 =
+        render_target_cache.CreateOffscreen(*GetContext(), {100, 100}, 1);
+    EXPECT_EQ(render_target_cache.CachedTextureCount(), 2u);
+    EXPECT_EQ(target4.GetColorAttachment(0).texture.get(), raw_t2_tex);
+  }
+
+  render_target_cache.End();
+}
+
+TEST_F(RenderTargetCacheTest, DoesNotPersistFailedAllocations) {
   ScopedValidationDisable disable;
   auto allocator = std::make_shared<TestAllocator>();
   auto render_target_cache =
@@ -120,7 +203,7 @@ TEST_P(RenderTargetCacheTest, DoesNotPersistFailedAllocations) {
   EXPECT_EQ(render_target_cache.CachedTextureCount(), 0u);
 }
 
-TEST_P(RenderTargetCacheTest, CachedTextureGetsNewAttachmentConfig) {
+TEST_F(RenderTargetCacheTest, CachedTextureGetsNewAttachmentConfig) {
   auto render_target_cache = RenderTargetCache(
       GetContext()->GetResourceAllocator(), /*keep_alive_frame_count=*/0);
 
@@ -145,7 +228,7 @@ TEST_P(RenderTargetCacheTest, CachedTextureGetsNewAttachmentConfig) {
   EXPECT_EQ(color2.clear_color, Color::Red());
 }
 
-TEST_P(RenderTargetCacheTest, CreateWithEmptySize) {
+TEST_F(RenderTargetCacheTest, CreateWithEmptySize) {
   auto render_target_cache = RenderTargetCache(
       GetContext()->GetResourceAllocator(), /*keep_alive_frame_count=*/0);
 

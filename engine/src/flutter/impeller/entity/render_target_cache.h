@@ -67,7 +67,7 @@ class RenderTargetCache : public RenderTargetAllocator {
 
  private:
   struct RenderTargetData {
-    bool used_this_frame;
+    size_t last_used_pass_index;
     uint32_t keep_alive_frame_count;
     RenderTargetConfig config;
     RenderTarget render_target;
@@ -78,6 +78,7 @@ class RenderTargetCache : public RenderTargetAllocator {
   std::vector<RenderTargetData> render_target_data_;
   uint32_t keep_alive_frame_count_;
   uint32_t cache_disabled_count_ = 0;
+  size_t current_pass_index_ = 0;
 
   RenderTargetCache(const RenderTargetCache&) = delete;
 
