@@ -17,14 +17,22 @@ GeometryResult UberSDFGeometry::GetPositionBuffer(
     const ContentContext& renderer,
     const Entity& entity,
     RenderPass& pass) const {
-  // Return a quad (FillRectGeometry) that covers the base shape expanded by
-  // padding for stroke width and AA.
-  //
-  // For future performance enhancements (if the fill rate is a limiting factor)
-  // this can be optimized to use a tighter geometry for specific shapes. E.g.
-  // Using a tighter polygon, or cutting out the interior for stroked shapes.
-  FillRectGeometry frg(GetExpandedBounds(entity.GetTransform()));
-  return frg.GetPositionBuffer(renderer, entity, pass);
+  auto& data_host_buffer = renderer.GetTransientsDataBuffer();
+  Rect local_bounds = GetExpandedBounds(entity.GetTransform(), Point(0, 0));
+  return GeometryResult{
+      .type = PrimitiveType::kTriangleStrip,
+      .vertex_buffer =
+          {
+              .vertex_buffer =
+                  data_host_buffer.Emplace(local_bounds.GetPoints().data(),
+                                           8 * sizeof(float), alignof(float)),
+              .vertex_count = 4,
+              .index_type = IndexType::kNone,
+          },
+      .transform =
+          entity.GetShaderTransform(pass).Translate(Vector3(params_.center)),
+      .mode = GeometryResult::Mode::kNormal,
+  };
 }
 
 std::optional<Rect> UberSDFGeometry::GetCoverage(
@@ -64,7 +72,8 @@ bool UberSDFGeometry::IsAxisAlignedRect() const {
   return (params_.type == UberSDFParameters::Type::kRect && !params_.stroke);
 }
 
-Rect UberSDFGeometry::GetExpandedBounds(const Matrix& transform) const {
+Rect UberSDFGeometry::GetExpandedBounds(const Matrix& transform,
+                                        Point center) const {
   // Get the scaling factor of the transform in the X and Y directions.
   Vector2 transform_scaling = transform.GetBasisScaleXY();
 
@@ -90,7 +99,7 @@ Rect UberSDFGeometry::GetExpandedBounds(const Matrix& transform) const {
   // Padding for antialiasing.
   Size aa_padding = UberSDFParameters::kAntialiasPixels * device_pixel_size;
 
-  return Rect::MakeEllipseBounds(params_.center, params_.size)
+  return Rect::MakeEllipseBounds(center, params_.size)
       .Expand(stroke_padding + aa_padding);
 }
 

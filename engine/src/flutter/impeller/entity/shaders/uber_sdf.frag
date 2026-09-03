@@ -27,45 +27,30 @@ uniform FragInfo {
   /// The RGBA color of the shape (or paint opacity in color.a for gradients).
   vec4 color;
   /// Corner radii for rounded rects (top-left, top-right, bottom-left,
-  /// bottom-right), or the circular cap radii for rounded superellipses in
-  /// radii.xy (top octant in x, right octant in y).
+  /// bottom-right), or the circular cap radii in xy (top, right) and
+  /// superellipse degree (n_x, n_y) in zw for rounded superellipses.
   vec4 radii;
+  /// The center of the corner transition circle for the top octant (xy) and
+  /// right octant (zw) of a rounded superellipse.
+  vec4 circle_centers;
+  /// Gradient coordinates: start point (or radial center) in xy, and pre-scaled
+  /// direction (linear) or inverse radius (radial) in zw.
+  vec4 gradient_coords;
 
   // ===========================================================================
   // vec2 fields
   // ===========================================================================
 
   // --- General Shape Geometry ---
-  /// The center position of the shape in local coordinates.
-  vec2 center;
   /// The half-dimensions of the shape (half-width, half-height).
   vec2 size;
   /// The size of a device pixel in local coordinates.
   vec2 pixel_size;
 
   // --- Superellipse Parameters ---
-  /// The exponent degree (n_x, n_y) of the superellipse curvature.
-  vec2 superellipse_degree;
   /// The angular span of the corner circular arc transitions for rounded
   /// superellipses.
   vec2 angle_span;
-  /// The center of the corner transition circle for the top octant of a
-  /// rounded superellipse.
-  vec2 circle_center_top;
-  /// The center of the corner transition circle for the right octant of a
-  /// rounded superellipse.
-  vec2 circle_center_right;
-
-  // --- Gradient Parameters ---
-  /// The starting point of a linear gradient, or the center point of a radial
-  /// gradient.
-  vec2 gradient_start;
-  /// The ending point of a linear gradient, or (radius, 0.0) for a radial
-  /// gradient.
-  vec2 gradient_end;
-  /// Half the size of a single gradient texel in normalized texture
-  /// coordinates.
-  vec2 half_texel;
 
   // ===========================================================================
   // float fields
@@ -84,13 +69,9 @@ uniform FragInfo {
   ///   1: Linear gradient
   ///   2: Radial gradient
   float color_source_type;
-  /// The width in device pixels over which to apply antialiasing.
-  float aa_pixels;
 
   // --- Stroke Parameters ---
-  /// Whether the shape is stroked (1.0) or filled (0.0).
-  float stroked;
-  /// The width of the stroke.
+  /// The width of the stroke (>= 0.0 for stroked, < 0.0 for filled).
   float stroke_width;
   /// The join style for the stroke:
   ///   0: Miter
@@ -105,6 +86,9 @@ uniform FragInfo {
   ///   2: Mirror
   ///   3: Decal
   float tile_mode;
+  /// Half the size of a single gradient texel in normalized texture
+  /// coordinates along the gradient ramp (x axis).
+  float half_texel;
 }
 frag_info;
 
@@ -118,17 +102,19 @@ vec4 getColor() {
   if (frag_info.color_source_type < 0.5) {
     // Solid color
     color = frag_info.color;
-  } else if (frag_info.color_source_type < 1.5) {
-    // Linear gradient
-    vec4 gradient_color = IPSampleLinearGradient(
-        color_source_sampler, frag_info.gradient_start, frag_info.gradient_end,
-        v_position, frag_info.half_texel, frag_info.tile_mode, vec4(0.0));
-    color = vec4(gradient_color.rgb, gradient_color.a * frag_info.color.a);
   } else {
-    // Radial gradient
-    vec4 gradient_color = IPSampleRadialGradient(
-        color_source_sampler, frag_info.gradient_start,
-        frag_info.gradient_end.x, v_position, frag_info.half_texel,
+    float t;
+    if (frag_info.color_source_type < 1.5) {
+      // Linear gradient
+      t = dot(v_position - frag_info.gradient_coords.xy,
+              frag_info.gradient_coords.zw);
+    } else {
+      // Radial gradient
+      t = length(v_position - frag_info.gradient_coords.xy) *
+          frag_info.gradient_coords.z;
+    }
+    vec4 gradient_color = IPSampleLinearWithTileMode(
+        color_source_sampler, vec2(t, 0.5), vec2(frag_info.half_texel, 0.5),
         frag_info.tile_mode, vec4(0.0));
     color = vec4(gradient_color.rgb, gradient_color.a * frag_info.color.a);
   }
@@ -311,9 +297,9 @@ vec2 filledSDF(vec2 p) {
   } else {  // Symmetric Rounded Superellipse
     vec2 normal;
     sdf = distanceFromRoundedSuperellipse(
-        p, frag_info.superellipse_degree, frag_info.size, frag_info.radii.xy,
-        frag_info.angle_span, frag_info.circle_center_top,
-        frag_info.circle_center_right, normal);
+        p, frag_info.radii.zw, frag_info.size, frag_info.radii.xy,
+        frag_info.angle_span, frag_info.circle_centers.xy,
+        frag_info.circle_centers.zw, normal);
     pixel_size = directionalPixelSize(normal);
   }
   return vec2(sdf, pixel_size);
@@ -344,11 +330,7 @@ vec2 strokedSDF(vec2 p) {
         distanceFromChamferRect(p, frag_info.size + half_stroke, half_stroke);
     float inner = base_sdf + half_stroke;
     sdf = max(outer, -inner);
-    // For a 45-degree bevel join, the unit normal is (1/sqrt(2), 1/sqrt(2)).
-    // The directional pixel size along this normal simplifies to:
-    //   length(vec2(1/sqrt(2), 1/sqrt(2)) * frag_info.pixel_size)
-    //   = length(frag_info.pixel_size) * (1.0 / sqrt(2.0)).
-    pixel_size = length(frag_info.pixel_size) * kHalfSqrtTwo;
+    pixel_size = base_pixel_size;
   } else {
     // All other shapes
     vec2 sdf_and_pixel_size =
@@ -378,14 +360,14 @@ float gammaCorrectedAlpha(float alpha, vec3 foreground_rgb) {
 void main() {
   vec4 color = getColor();
 
-  vec2 p = v_position - frag_info.center;
+  vec2 p = v_position;
 
   vec2 sdf_and_pixel_size =
-      (frag_info.stroked < 0.5) ? filledSDF(p) : strokedSDF(p);
+      (frag_info.stroke_width < 0.0) ? filledSDF(p) : strokedSDF(p);
   float sdf = sdf_and_pixel_size.x;
   float pixel_size = sdf_and_pixel_size.y;
 
-  float alpha = SDFAlpha(sdf, pixel_size, frag_info.aa_pixels);
+  float alpha = SDFAlpha(sdf, pixel_size, 1.0);
   // Clamp alpha in case floating point precision errors cause it to be outside
   // [0.0, 1.0].
   alpha = clamp(alpha, 0.0, 1.0);

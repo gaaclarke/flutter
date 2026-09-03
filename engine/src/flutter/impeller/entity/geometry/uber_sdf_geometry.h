@@ -44,7 +44,11 @@ class UberSDFGeometry final : public Geometry {
   // The `transform` argument is used to determine the exact stroke width and AA
   // padding to apply. But the returned rectangle is in local space;
   // `transform` is not applied to the returned bounds rectangle.
-  Rect GetExpandedBounds(const Matrix& transform) const;
+  Rect GetExpandedBounds(const Matrix& transform) const {
+    return GetExpandedBounds(transform, params_.center);
+  }
+
+  Rect GetExpandedBounds(const Matrix& transform, Point center) const;
 };
 
 }  // namespace impeller

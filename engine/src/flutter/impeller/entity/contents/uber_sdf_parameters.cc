@@ -107,8 +107,9 @@ std::optional<UberSDFParameters> UberSDFParameters::MakeRoundedSuperellipse(
                           top_right.right.circle_max_angle.radians),
       .circle_center_top = top_right.top.circle_center,
       .circle_center_right = top_right.right.circle_center,
-      .radii = Vector4(top_right.top.circle_radius,
-                       top_right.right.circle_radius, 0.0f, 0.0f)};
+      .radii =
+          Vector4(top_right.top.circle_radius, top_right.right.circle_radius,
+                  top_right.top.se_n, top_right.right.se_n)};
 }
 
 }  // namespace impeller

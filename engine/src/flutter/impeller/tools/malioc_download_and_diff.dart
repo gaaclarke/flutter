@@ -62,7 +62,7 @@ void main(List<String> arguments) async {
 
     await runGN(flutterDir, srcRoot, options.config, maliocPath);
     await runNinja(srcRoot, options.config, options.target);
-    await runDiff(flutterDir, srcRoot, options.config, options.update);
+    exitCode = await runDiff(flutterDir, srcRoot, options.config, options.update);
   } finally {
     if (tempDir != null && tempDir.existsSync()) {
       print('Cleaning up temporary directory: ${tempDir.path}');
@@ -212,7 +212,7 @@ Future<void> runNinja(Directory srcRoot, String config, String target) async {
   }
 }
 
-Future<void> runDiff(Directory flutterDir, Directory srcRoot, String config, bool update) async {
+Future<int> runDiff(Directory flutterDir, Directory srcRoot, String config, bool update) async {
   print('Generating diff...');
   final diffArgs = [
     '${flutterDir.path}/impeller/tools/malioc_diff.py',
@@ -232,8 +232,5 @@ Future<void> runDiff(Directory flutterDir, Directory srcRoot, String config, boo
     workingDirectory: srcRoot.path,
     mode: ProcessStartMode.inheritStdio,
   );
-  final int exitCode = await process.exitCode;
-  if (exitCode != 0) {
-    throw Exception('Error running diff: $exitCode');
-  }
+  return process.exitCode;
 }

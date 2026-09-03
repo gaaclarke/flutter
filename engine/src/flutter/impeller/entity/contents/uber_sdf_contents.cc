@@ -68,16 +68,26 @@ struct SamplerBinding {
 ///         the texture and sampler for the gradient.
 SamplerBinding SetupGradientParameters(
     const UberSDFParameters::GradientParameters& gradient,
+    Point center,
     const ContentContext& renderer,
     FS::FragInfo& frag_info) {
   FML_DCHECK(gradient.texture);
-  frag_info.gradient_start = gradient.start;
-  frag_info.gradient_end = gradient.end;
   frag_info.tile_mode = static_cast<Scalar>(gradient.tile_mode);
   auto texture_size = gradient.texture->GetSize();
   FML_DCHECK(!texture_size.IsEmpty());
-  frag_info.half_texel =
-      Point(0.5f, 0.5f) / Point(texture_size.width, texture_size.height);
+  frag_info.half_texel = 0.5f / texture_size.width;
+
+  Point start_rel = gradient.start - center;
+  if (gradient.type == UberSDFParameters::GradientParameters::Type::kLinear) {
+    Point delta = gradient.end - gradient.start;
+    Scalar length_sq = delta.x * delta.x + delta.y * delta.y;
+    Point dir = length_sq > 0.0f ? delta / length_sq : Point(0.0f, 0.0f);
+    frag_info.gradient_coords = Vector4(start_rel.x, start_rel.y, dir.x, dir.y);
+  } else {
+    Scalar inv_radius = gradient.end.x > 0.0f ? 1.0f / gradient.end.x : 0.0f;
+    frag_info.gradient_coords =
+        Vector4(start_rel.x, start_rel.y, inv_radius, 0.0f);
+  }
 
   SamplerDescriptor sampler_desc;
   sampler_desc.min_filter = MinMagFilter::kLinear;
@@ -114,27 +124,32 @@ bool UberSDFContents::Render(const ContentContext& renderer,
   frag_info.color_source_type = ToShaderColorSourceType(params_);
   frag_info.color =
       params_.color.WithAlpha(params_.color.alpha * GetOpacityFactor());
-  frag_info.center = params_.center;
   frag_info.size = params_.size;
   Vector2 transform_scaling = entity.GetTransform().GetBasisScaleXY();
   frag_info.pixel_size =
       Point(transform_scaling.x != 0.0f ? 1.0f / transform_scaling.x : 0.0f,
             transform_scaling.y != 0.0f ? 1.0f / transform_scaling.y : 0.0f);
-  frag_info.stroked = params_.stroke ? 1.0f : 0.0f;
-  frag_info.stroke_width = params_.stroke ? params_.stroke->width : 0.0f;
+  frag_info.stroke_width = params_.stroke ? params_.stroke->width : -1.0f;
   frag_info.stroke_join =
       params_.stroke ? ToShaderStrokeJoin(params_.stroke->join) : 0.0f;
-  frag_info.aa_pixels = UberSDFParameters::kAntialiasPixels;
-  frag_info.superellipse_degree = params_.superellipse_degree;
   frag_info.angle_span = params_.angle_span;
-  frag_info.circle_center_top = params_.circle_center_top;
-  frag_info.circle_center_right = params_.circle_center_right;
-  frag_info.radii = params_.radii;
+  frag_info.circle_centers =
+      Vector4(params_.circle_center_top.x, params_.circle_center_top.y,
+              params_.circle_center_right.x, params_.circle_center_right.y);
+  frag_info.radii =
+      params_.type == UberSDFParameters::Type::kRoundedSuperellipseSymmetric
+          ? Vector4(params_.radii.x, params_.radii.y,
+                    params_.superellipse_degree.x,
+                    params_.superellipse_degree.y)
+          : params_.radii;
+  frag_info.gradient_coords = Vector4();
+  frag_info.half_texel = 0.0f;
+  frag_info.tile_mode = 0.0f;
 
   SamplerBinding sampler_binding;
   if (params_.gradient) {
-    sampler_binding =
-        SetupGradientParameters(params_.gradient.value(), renderer, frag_info);
+    sampler_binding = SetupGradientParameters(
+        params_.gradient.value(), params_.center, renderer, frag_info);
   } else {
     sampler_binding.texture = renderer.GetEmptyTexture();
     sampler_binding.sampler =
