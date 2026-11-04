@@ -25,6 +25,7 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 
+import '_text_locale.dart';
 import 'actions.dart';
 import 'app_lifecycle_listener.dart';
 import 'autofill.dart';
@@ -1194,6 +1195,8 @@ class EditableText extends StatefulWidget {
   ///
   /// It's rarely necessary to set this property. By default its value
   /// is inherited from the enclosing app with `Localizations.localeOf(context)`.
+  /// If the app did not choose its locale (see [Localizations.isDefaultLocale]),
+  /// no locale is used and the platform's default locale applies.
   ///
   /// See [RenderEditable.locale] for more information.
   final Locale? locale;
@@ -6261,7 +6264,7 @@ class _Editable extends MultiChildRenderObjectWidget {
       textScaler: textScaler,
       textAlign: textAlign,
       textDirection: textDirection,
-      locale: locale ?? Localizations.maybeLocaleOf(context),
+      locale: locale ?? textLocaleOf(context),
       selection: value.selection,
       offset: offset,
       ignorePointer: rendererIgnoresPointer,
@@ -6305,7 +6308,7 @@ class _Editable extends MultiChildRenderObjectWidget {
       ..textScaler = textScaler
       ..textAlign = textAlign
       ..textDirection = textDirection
-      ..locale = locale ?? Localizations.maybeLocaleOf(context)
+      ..locale = locale ?? textLocaleOf(context)
       ..selection = value.selection
       ..offset = offset
       ..ignorePointer = rendererIgnoresPointer
